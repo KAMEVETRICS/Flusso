@@ -1,0 +1,23 @@
+[Unit]
+Description=Flusso A2A communication daemon
+Wants=network-online.target
+After=network-online.target flusso-engine.service
+Requires=flusso-engine.service
+
+[Service]
+Type=oneshot
+User=flusso
+Group=flusso
+WorkingDirectory=/opt/flusso
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=/etc/flusso/flusso.env
+ExecStart=/usr/bin/env okx-a2a daemon start
+ExecStartPost=/usr/bin/env okx-a2a daemon status
+ExecReload=/usr/bin/env okx-a2a daemon restart
+RemainAfterExit=yes
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

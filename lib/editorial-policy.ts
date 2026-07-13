@@ -1,0 +1,204 @@
+import type {
+  ContentAsset,
+  EditorialMixItem,
+  EditorialProfile,
+  ProjectBrief
+} from "./schemas";
+
+export const EDITORIAL_POLICY = [
+  "Write for a real reader with a real decision to make.",
+  "Use one primary editorial mode per asset.",
+  "Name concrete mechanisms, examples, constraints, tradeoffs, or consequences.",
+  "Remove generic openings, empty hype, fake profundity, repetitive contrasts, and conclusions that restate the introduction.",
+  "Do not use phrases such as in today's fast-paced world, ever-evolving landscape, game-changing, revolutionary, unlock the power, or seamless unless technically precise.",
+  "Never invent customer stories, founder anecdotes, quotations, metrics, partnerships, capabilities, outcomes, or personal experiences.",
+  "Preserve factual claims, evidence source IDs, asset IDs, calendar IDs, series IDs, hook IDs, territories, segments, platform, and CTA intent.",
+  "For X short posts, make one point and keep the copy within 280 characters.",
+  "For X threads, return three to twelve ordered posts, each within 280 characters, with progression and a real conclusion.",
+  "For X articles and Medium, return a subtitle, introduction, at least three developed sections, conclusion, and tags.",
+  "For Medium, always use the article format.",
+  "Use visuals only when they improve comprehension. Prefer deterministic charts for numeric data and avoid text-heavy generated images."
+].join("\n");
+
+const mixes: Record<EditorialProfile, Array<[EditorialMixItem["mode"], number, string]>> = {
+  balanced: [
+    ["direct-practical", 20, "Keep the campaign useful and immediately legible."],
+    ["technical-explainer", 20, "Build authority through mechanisms and tradeoffs."],
+    ["point-of-view", 15, "Give the brand a defensible position."],
+    ["how-to", 15, "Turn strategy into executable guidance."],
+    ["storytelling", 10, "Use real sequences and lessons when evidence exists."],
+    ["proof-led", 10, "Connect claims to supplied evidence."],
+    ["comparison", 5, "Clarify choices and evaluation criteria."],
+    ["community", 5, "Create selective opportunities for response."]
+  ],
+  "technical-authority": [
+    ["technical-explainer", 30, "Lead with mechanisms, architecture, and limitations."],
+    ["how-to", 20, "Make technical knowledge executable."],
+    ["point-of-view", 15, "Take defensible positions on implementation choices."],
+    ["proof-led", 15, "Support authority with evidence."],
+    ["direct-practical", 10, "Keep complex ideas accessible."],
+    ["comparison", 10, "Explain tradeoffs between approaches."]
+  ],
+  "founder-led": [
+    ["storytelling", 25, "Use real founder or company sequences from supplied sources."],
+    ["point-of-view", 25, "Make the founder's perspective distinct."],
+    ["direct-practical", 20, "Translate experience into useful lessons."],
+    ["technical-explainer", 10, "Explain the product without losing the human voice."],
+    ["how-to", 10, "Turn lessons into practical steps."],
+    ["proof-led", 5, "Ground the narrative in evidence."],
+    ["community", 5, "Invite specific peer responses."]
+  ],
+  "direct-growth": [
+    ["direct-practical", 30, "Lead with useful value and a proportionate action."],
+    ["proof-led", 20, "Make conversion claims evidence-led."],
+    ["comparison", 15, "Clarify why the offer is preferable."],
+    ["how-to", 15, "Show the path from interest to action."],
+    ["point-of-view", 10, "Create differentiated demand."],
+    ["technical-explainer", 5, "Answer implementation objections."],
+    ["community", 5, "Use selective conversation prompts."]
+  ]
+};
+
+export function editorialMixFor(profile: EditorialProfile): EditorialMixItem[] {
+  return mixes[profile].map(([mode, percentage, rationale]) => ({
+    mode,
+    percentage,
+    rationale
+  }));
+}
+
+export type EditorialIssue = {
+  assetId: string;
+  code: "slop" | "short-post-length" | "thread-structure" | "thread-post-length" | "article-structure" | "medium-format" | "format-mix" | "duplicate-opening";
+  message: string;
+};
+
+const slopPatterns: Array<[RegExp, string]> = [
+  [/\bin today'?s fast[- ]paced world\b/i, "generic fast-paced-world opening"],
+  [/\bever[- ]evolving landscape\b/i, "generic ever-evolving-landscape phrase"],
+  [/\bgame[- ]chang(?:er|ing)\b/i, "unsupported game-changing language"],
+  [/\brevolution(?:ary|ize|izing)\b/i, "unsupported revolutionary language"],
+  [/\bunlock the power\b/i, "generic unlock-the-power phrase"],
+  [/\bdelve into\b/i, "generic delve-into phrasing"],
+  [/\bnot just\b[\s\S]{0,100}\bbut\b/i, "formulaic not-just-but contrast"]
+];
+
+function assetText(asset: ContentAsset) {
+  return [
+    asset.title,
+    asset.copy,
+    ...asset.threadPosts,
+    asset.article?.subtitle ?? "",
+    asset.article?.introduction ?? "",
+    ...(asset.article?.sections.flatMap((section) => [section.heading, section.body]) ?? []),
+    asset.article?.conclusion ?? ""
+  ].join("\n");
+}
+
+function normalizedOpening(asset: ContentAsset) {
+  return assetText(asset)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .slice(0, 10)
+    .join(" ");
+}
+
+export function inspectEditorialAssets(
+  assets: ContentAsset[],
+  brief: ProjectBrief
+): EditorialIssue[] {
+  const issues: EditorialIssue[] = [];
+
+  for (const asset of assets) {
+    const text = assetText(asset);
+    for (const [pattern, label] of slopPatterns) {
+      if (pattern.test(text)) {
+        issues.push({ assetId: asset.id, code: "slop", message: "Remove " + label + "." });
+      }
+    }
+
+    if (asset.platform === "X" && asset.contentFormat === "short-post" && asset.copy.length > 280) {
+      issues.push({
+        assetId: asset.id,
+        code: "short-post-length",
+        message: "X short post exceeds 280 characters."
+      });
+    }
+
+    if (asset.platform === "X" && asset.contentFormat === "thread") {
+      if (asset.threadPosts.length < 3 || asset.threadPosts.length > 12) {
+        issues.push({
+          assetId: asset.id,
+          code: "thread-structure",
+          message: "X thread must contain three to twelve posts."
+        });
+      }
+      if (asset.threadPosts.some((post) => !post.trim() || post.length > 280)) {
+        issues.push({
+          assetId: asset.id,
+          code: "thread-post-length",
+          message: "Every X thread post must be nonempty and at most 280 characters."
+        });
+      }
+    }
+
+    if (asset.contentFormat === "article") {
+      if (
+        !asset.article ||
+        !asset.article.subtitle.trim() ||
+        !asset.article.introduction.trim() ||
+        asset.article.sections.length < 3 ||
+        asset.article.sections.some((section) => !section.heading.trim() || !section.body.trim()) ||
+        !asset.article.conclusion.trim()
+      ) {
+        issues.push({
+          assetId: asset.id,
+          code: "article-structure",
+          message: "Article requires a subtitle, introduction, at least three developed sections, and conclusion."
+        });
+      }
+    }
+
+    if (asset.platform === "Medium" && asset.contentFormat !== "article") {
+      issues.push({
+        assetId: asset.id,
+        code: "medium-format",
+        message: "Medium assets must use the article format."
+      });
+    }
+  }
+
+  const xAssets = assets.filter((asset) => asset.platform === "X");
+  if (brief.platforms.includes("X") && xAssets.length >= 3) {
+    for (const format of ["short-post", "thread", "article"] as const) {
+      if (!xAssets.some((asset) => asset.contentFormat === format)) {
+        issues.push({
+          assetId: "campaign",
+          code: "format-mix",
+          message: "X output must include at least one " + format + " when three or more X assets are produced."
+        });
+      }
+    }
+  }
+
+  const openingOwners = new Map<string, string>();
+  for (const asset of assets) {
+    const opening = normalizedOpening(asset);
+    if (!opening) continue;
+    const existing = openingOwners.get(opening);
+    if (existing) {
+      issues.push({
+        assetId: asset.id,
+        code: "duplicate-opening",
+        message: "Opening duplicates " + existing + "."
+      });
+    } else {
+      openingOwners.set(opening, asset.id);
+    }
+  }
+
+  return issues;
+}

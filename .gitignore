@@ -1,0 +1,10 @@
+.env
+.env.local
+.env.*.local
+.next/
+node_modules/
+*.log
+tsconfig.tsbuildinfo
+video_frames_*/
+raw gpt chat.txt
+Copy of HubSpot x MATG*

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Engineer - Pipeline Progress</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --green: #16A34A; --green-light: #F0FDF4; --charcoal: #111827; --body: #374151; --muted: #6B7280;
+            --border: #E5E7EB; --surface: #F9FAFB; --amber: #D97706; --amber-bg: #FFFBEB;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { display: flex; flex-direction: column; height: 100vh; font-size: 13px; color: var(--body); }
+
+        .top-nav { height: 48px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; background: white; z-index: 10; }
+        .nav-left { display: flex; align-items: center; gap: 12px; font-weight: 600; color: var(--charcoal); font-size: 14px; }
+        .logo-box { width: 16px; height: 16px; background: var(--charcoal); border-radius: 4px; }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+        }
+
+        .live-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--green); font-weight: 600; margin-right: 12px; }
+        .live-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse-dot 2s infinite; }
+
+        .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--charcoal); }
+
+        .main-layout { display: flex; flex-grow: 1; overflow: hidden; }
+
+        .col-left { width: 260px; border-right: 1px solid var(--border); padding: 24px; overflow-y: auto; flex-shrink: 0; }
+        .col-center { flex-grow: 1; padding: 24px 48px; overflow-y: auto; }
+        .col-right { width: 320px; border-left: 1px solid var(--border); padding: 24px; overflow-y: auto; flex-shrink: 0; background: var(--surface); }
+
+        .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; margin-bottom: 12px; }
+        .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+        .kv-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; }
+
+        .prog-bar-bg { width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
+        .prog-bar-fill { height: 100%; background: var(--green); }
+
+        .col-title { font-size: 18px; font-weight: 600; color: var(--charcoal); margin-bottom: 4px; }
+        .col-sub { font-size: 13px; color: var(--green); margin-bottom: 32px; }
+
+        .pipeline { position: relative; padding-left: 14px; }
+        .pipeline::before { content: ''; position: absolute; top: 20px; bottom: 40px; left: 24px; width: 2px; background: var(--border); z-index: 1; }
+
+        .stage-card { position: relative; z-index: 2; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+
+        .stage-circle { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 3; margin-left: -1px; }
+        .stage-card.complete .stage-circle { background: var(--green); color: white; }
+        .stage-card.queued .stage-circle { border: 2px solid var(--border); background: white; }
+        .stage-card.locked .stage-circle { color: var(--muted); }
+
+        @keyframes spin-arc { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .stage-card.running { background: var(--green-light); border-color: var(--green); border-width: 1.5px; }
+        .stage-card.running .stage-circle { background: white; border: 2px solid transparent; border-top-color: var(--green); border-right-color: var(--green); animation: spin-arc 1s linear infinite; }
+
+        .st-num { font-size: 11px; color: var(--muted); min-width: 16px; }
+        .st-name-wrap { flex-grow: 1; }
+        .st-name { font-size: 14px; font-weight: 600; color: var(--charcoal); }
+        .stage-card.running .st-name { color: var(--green); }
+        .stage-card.queued .st-name, .stage-card.locked .st-name { color: var(--muted); font-weight: 500; }
+
+        .st-note { font-size: 11px; color: var(--muted); font-style: italic; margin-top: 4px; }
+        .stage-card.running .st-note { color: var(--green); }
+
+        .st-meta { display: flex; align-items: center; gap: 12px; }
+        .st-time { font-size: 12px; color: var(--muted); }
+        .pill { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+        .pill-green { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); }
+        .pill-gray { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+
+        .stage-card.running .st-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+
+        .prog-mini { width: 120px; height: 4px; background: var(--green-border); border-radius: 2px; }
+        .prog-mini-fill { height: 100%; background: var(--green); }
+
+        .btn-row { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+        .btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .btn-outline { border: 1px solid var(--border); background: white; color: var(--body); }
+        .link-red { color: var(--red); background: none; border: none; font-size: 13px; cursor: pointer; }
+
+        .artifact-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+        .art-header { font-size: 12px; font-weight: 600; color: var(--charcoal); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .dot-green { width: 6px; height: 6px; background: var(--green); border-radius: 50%; }
+        .dot-amber { width: 6px; height: 6px; background: var(--amber); border-radius: 50%; animation: pulse-dot 2s infinite; }
+
+        .art-list { list-style: none; }
+        .art-list li { font-size: 12px; margin-bottom: 4px; display: flex; gap: 6px; align-items: flex-start; }
+        .art-list li::before { content: '•'; color: var(--muted); }
+
+        .art-list.checks li::before { content: '✓'; color: var(--green); font-weight: bold; }
+
+        .chip-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip { padding: 2px 8px; border-radius: 4px; background: var(--green-light); color: var(--green); font-size: 11px; }
+
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <div class="nav-left"><div class="logo-box"></div> Content Engineer</div>
+        <div style="color: var(--muted);">Projects &rsaquo; OKX Q3 &rsaquo; Running</div>
+        <div style="display: flex; align-items: center;">
+            <div class="live-badge"><div class="live-dot"></div> Live</div>
+            <div class="avatar">AK</div>
+        </div>
+    </div>
+
+    <div class="main-layout">
+
+        <div class="col-left">
+            <div class="section-label">Project Summary</div>
+            <div style="font-size: 15px; font-weight: 700; color: var(--charcoal); margin-bottom: 16px;">OKX.AI Q3 Campaign</div>
+
+            <div class="kv-row"><span style="color:var(--muted);">Goal</span><span>Developer Adoption</span></div>
+            <div class="kv-row"><span style="color:var(--muted);">Duration</span><span>30 days</span></div>
+            <div class="kv-row"><span style="color:var(--muted);">Platforms</span><span>X, In, News, Disc</span></div>
+            <div class="kv-row"><span style="color:var(--muted);">Audience</span><span>Web3 Devs, Growth</span></div>
+
+            <div class="divider"></div>
+
+            <div class="kv-row"><span style="color:var(--muted);">Started</span><span>2:47 PM</span></div>
+            <div class="kv-row"><span style="color:var(--muted);">Est. complete</span><span>4:12 PM</span></div>
+            <div class="kv-row"><span style="color:var(--muted);">Elapsed</span><span style="font-family: monospace;" id="timer">00:23:14</span></div>
+
+            <div class="divider"></div>
+
+            <div class="section-label">Overall Progress</div>
+            <div class="prog-bar-bg"><div class="prog-bar-fill" style="width: 40%;"></div></div>
+            <div style="font-size: 11px; color: var(--muted);">Stage 5 of 10 &middot; 40% complete</div>
+
+            <div class="divider"></div>
+
+            <div class="section-label">Configuration</div>
+            <div class="kv-row"><span style="color:var(--muted);">Tone</span><span>Thought Leader</span></div>
+            <div class="kv-row"><span style="color:var(--muted);">Capacity</span><span>Medium</span></div>
+            <div class="kv-row"><span style="color:var(--muted);">Sources</span><span>Auto-discover</span></div>
+            <div class="kv-row"><span style="color:var(--muted);">Proof Layer</span><span style="display:flex; align-items:center; gap:4px;"><div class="dot-green"></div> Enabled</span></div>
+        </div>
+
+        <div class="col-center">
+            <div class="col-title">Pipeline Progress</div>
+            <div class="col-sub">Stage 5 of 10 &mdash; Hook Engineering running</div>
+
+            <div class="pipeline">
+
+                <div class="stage-card complete">
+                    <div class="stage-circle">&check;</div>
+                    <div class="st-num">01</div>
+                    <div class="st-name-wrap">
+                        <div class="st-name">Context Ingestion</div>
+                        <div class="st-note">12 sources ingested, 4 docs parsed</div>
+                    </div>
+                    <div class="st-meta">
+                        <span class="st-time">0:23</span>
+                        <span class="pill pill-green">Complete</span>
+                    </div>
+                </div>
+
+                <div class="stage-card complete">
+                    <div class="stage-circle">&check;</div>
+                    <div class="st-num">02</div>
+                    <div class="st-name-wrap">
+                        <div class="st-name">Competitive Gap Analysis</div>
+                        <div class="st-note">8 gaps vs Binance, Coinbase, Bybit</div>
+                    </div>
+                    <div class="st-meta">
+                        <span class="st-time">1:47</span>
+                        <span class="pill pill-green">Complete</span>
+                    </div>
+                </div>
+
+                <div class="stage-card complete">
+                    <div class="stage-circle">&check;</div>
+                    <div class="st-num">03</div>
+                    <div class="st-name-wrap">
+                        <div class="st-name">Audience Segmentation</div>
+                        <div class="st-note">4 segments: Devs, Growth, Investors, Community</div>
+                    </div>
+                    <div class="st-meta">
+                        <span class="st-time">2:11</span>
+                        <span class="pill pill-green">Complete</span>
+                    </div>
+                </div>
+
+                <div class="stage-card complete">
+                    <div class="stage-circle">&check;</div>
+                    <div class="st-num">04</div>
+                    <div class="st-name-wrap">
+                        <div class="st-name">Content Territories</div>
+                        <div class="st-note">6 territories mapped</div>
+                    </div>
+                    <div class="st-meta">
+                        <span class="st-time">1:55</span>
+                        <span class="pill pill-green">Complete</span>
+                    </div>
+                </div>
+
+                <div class="stage-card running">
+                    <div class="stage-circle"></div>
+                    <div class="st-num">05</div>
+                    <div class="st-name-wrap">
+                        <div class="st-name">Hook Engineering</div>
+                        <div class="st-note">14 of 25 hooks generated</div>
+                    </div>
+                    <div class="st-meta">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <div class="live-dot"></div>
+                            <span class="pill pill-green" style="background:var(--green); color:white;">Running</span>
+                        </div>
+                        <div class="prog-mini"><div class="prog-mini-fill" style="width:56%;"></div></div>
+                    </div>
+                </div>
+
+                <div class="stage-card queued">
+                    <div class="stage-circle"></div>
+                    <div class="st-num">06</div>
+                    <div class="st-name-wrap"><div class="st-name">Campaign Architecture</div></div>
+                    <div class="st-meta"><span class="pill pill-gray">Queued</span></div>
+                </div>
+
+                <div class="stage-card queued">
+                    <div class="stage-circle"></div>
+                    <div class="st-num">07</div>
+                    <div class="st-name-wrap"><div class="st-name">Calendar Engineering</div></div>
+                    <div class="st-meta"><span class="pill pill-gray">Queued</span></div>
+                </div>
+
+                <div class="stage-card queued">
+                    <div class="stage-circle"></div>
+                    <div class="st-num">08</div>
+                    <div class="st-name-wrap"><div class="st-name">Content Production</div></div>
+                    <div class="st-meta"><span class="pill pill-gray">Queued</span></div>
+                </div>
+
+                <div class="stage-card queued">
+                    <div class="stage-circle"></div>
+                    <div class="st-num">09</div>
+                    <div class="st-name-wrap"><div class="st-name">Fact Verification</div></div>
+                    <div class="st-meta"><span class="pill pill-gray">Queued</span></div>
+                </div>
+
+                <div class="stage-card locked">
+                    <div class="stage-circle">🔒</div>
+                    <div class="st-num">10</div>
+                    <div class="st-name-wrap"><div class="st-name">Delivery Pack</div></div>
+                    <div class="st-meta"><span class="pill pill-gray">Locked</span></div>
+                </div>
+
+            </div>
+
+            <div class="btn-row">
+                <button class="link-red">Cancel Run</button>
+                <button class="btn btn-outline">Pause Generation</button>
+            </div>
+        </div>
+
+        <div class="col-right">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <div class="section-label" style="margin:0;">Live Artifacts</div>
+                <div style="font-family:monospace; font-size:11px; color:var(--muted);">Est: ~3 min</div>
+            </div>
+
+            <div class="artifact-card">
+                <div class="art-header"><div class="dot-green"></div> Audiences Discovered</div>
+                <ul class="art-list">
+                    <li>Web3 Native Developers &mdash; 23K MAU</li>
+                    <li>Growth &amp; Marketing Teams</li>
+                    <li>Crypto-curious Investors</li>
+                    <li>Builder / Founder Community</li>
+                </ul>
+            </div>
+
+            <div class="artifact-card">
+                <div class="art-header"><div class="dot-green"></div> Competitive Gaps Identified</div>
+                <ul class="art-list">
+                    <li>No long-form dev education (Binance)</li>
+                    <li>No source-backed content anywhere</li>
+                    <li>Weak newsletter presence across all</li>
+                    <li>Thin thought leadership in AI/content</li>
+                </ul>
+            </div>
+
+            <div class="artifact-card">
+                <div class="art-header"><div class="dot-green"></div> Content Territories Mapped</div>
+                <div class="chip-grid">
+                    <div class="chip">Developer Education</div>
+                    <div class="chip">Market Intelligence</div>
+                    <div class="chip">Product Evidence</div>
+                    <div class="chip">Community Stories</div>
+                    <div class="chip">Competitor Contrast</div>
+                    <div class="chip">OKX.AI Feature Depth</div>
+                </div>
+            </div>
+
+            <div class="artifact-card" style="border-color: var(--amber-bg);">
+                <div class="art-header"><div class="dot-amber"></div> Hooks In Progress</div>
+                <ul class="art-list checks">
+                    <li>"Why most AI content fails the evidence test"</li>
+                    <li>"The content gap in Web3 nobody talks about"</li>
+                    <li>"Building credibility in a trust-deficit market"</li>
+                </ul>
+                <div style="font-size:11px; font-style:italic; color:var(--amber); margin-top:8px;">
+                    &hellip; generating 22 more
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Simple timer logic
+        let h = 0, m = 23, s = 14;
+        setInterval(() => {
+            s++;
+            if(s >= 60) { s = 0; m++; }
+            if(m >= 60) { m = 0; h++; }
+            document.getElementById('timer').textContent =
+                `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }, 1000);
+    </script>
+</body>
+</html>

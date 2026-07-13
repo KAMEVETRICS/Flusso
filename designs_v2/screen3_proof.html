@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Engineer - Proof Layer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --green: #16A34A; --green-light: #F0FDF4; --charcoal: #111827; --body: #374151; --muted: #6B7280;
+            --border: #E5E7EB; --surface: #F9FAFB; --amber: #D97706; --amber-bg: #FFFBEB; --amber-border: #FDE68A;
+            --red: #DC2626; --blue-gray: #64748B;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { display: flex; flex-direction: column; height: 100vh; font-size: 13px; color: var(--body); }
+
+        .top-nav { height: 48px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+        .nav-left { display: flex; align-items: center; gap: 12px; font-weight: 600; color: var(--charcoal); font-size: 14px; }
+        .logo-box { width: 16px; height: 16px; background: var(--charcoal); border-radius: 4px; }
+        .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--charcoal); }
+
+        .page-header { padding: 16px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .page-title { font-size: 20px; font-weight: 700; color: var(--charcoal); }
+        .page-sub { color: var(--muted); margin-top: 4px; }
+        .btn-group { display: flex; gap: 8px; }
+        .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: white; cursor: pointer; font-weight: 500; font-size: 13px; }
+        .btn-primary { border-color: var(--green); color: var(--green); }
+        .btn-gray { background: var(--surface); }
+
+        .summary-cards { display: flex; gap: 16px; padding: 16px 32px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .sum-card { flex: 1; border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: white; }
+        .sum-num { font-size: 28px; font-weight: 700; color: var(--charcoal); display: flex; align-items: center; gap: 8px; }
+        .sum-label { font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-top: 4px; }
+
+        .filter-bar { height: 48px; padding: 0 32px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .filter-pill { padding: 6px 12px; border-radius: 999px; font-size: 11px; font-weight: 600; cursor: pointer; background: var(--surface); color: var(--body); border: 1px solid var(--border); }
+        .filter-pill.active { background: var(--green); color: white; border-color: var(--green); }
+
+        .main-area { display: flex; flex-grow: 1; overflow: hidden; }
+        .table-area { flex-grow: 1; padding: 0 32px; overflow-y: auto; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; border: 1px solid var(--border); }
+        th { text-align: left; padding: 12px; background: var(--surface); font-size: 12px; text-transform: uppercase; color: var(--muted); font-weight: 600; position: sticky; top: 0; border-bottom: 1px solid var(--border); z-index: 10; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); }
+        tr:nth-child(even) td { background: #FAFAFA; }
+        tr.selected td { background: var(--amber-bg); }
+        tr { cursor: pointer; }
+
+        .left-stripe { border-left: 3px solid transparent; }
+        .stripe-amber { border-left-color: var(--amber); }
+        .stripe-red { border-left-color: var(--red); }
+        .stripe-blue { border-left-color: #EFF6FF; }
+
+        .mini-bar-wrap { display: flex; align-items: center; gap: 8px; }
+        .mini-bar { width: 60px; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+        .mini-bar-fill { height: 100%; }
+
+        .status-pill { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+        .st-green { background: var(--green-light); color: var(--green); }
+        .st-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+        .st-red { background: #FEF2F2; color: var(--red); border: 1px solid #FECACA; }
+        .st-blue { background: #EFF6FF; color: var(--blue-gray); }
+
+        .right-drawer { width: 340px; border-left: 1px solid var(--border); background: var(--surface); padding: 20px; overflow-y: auto; flex-shrink: 0; }
+        .drawer-header { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; margin-bottom: 16px; }
+        .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+        .claim-detail-box { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: white; font-size: 15px; font-weight: 500; color: var(--charcoal); margin-bottom: 16px; }
+        .section-label { font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+
+        .callout-amber { background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--amber); padding: 8px 12px; border-radius: 6px; font-weight: 500; margin-bottom: 16px; }
+        .quote-box { background: white; border-left: 3px solid #D1D5DB; padding: 12px; font-style: italic; font-size: 12px; margin-bottom: 16px; }
+        .quote-src { display: block; margin-top: 8px; font-size: 11px; color: var(--muted); font-style: normal; }
+
+        .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 12px; }
+
+        .reco-box { background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: 8px; padding: 12px; font-size: 12px; line-height: 1.5; margin-top: 20px; margin-bottom: 20px; }
+
+        .action-btns { display: flex; flex-direction: column; gap: 8px; }
+        .act-btn { height: 36px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid; }
+        .btn-green-solid { background: var(--green); color: white; border-color: var(--green); }
+        .btn-amber-out { background: transparent; color: var(--amber); border-color: var(--amber-border); }
+        .btn-gray-out { background: transparent; color: var(--body); border-color: var(--border); }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <div class="nav-left"><div class="logo-box"></div> Content Engineer</div>
+        <div style="color: var(--muted);">Projects &rsaquo; OKX Q3 &rsaquo; Proof Report</div>
+        <div class="avatar">AK</div>
+    </div>
+
+    <div class="page-header">
+        <div>
+            <div class="page-title">Proof Report</div>
+            <div class="page-sub">OKX.AI Q3 Campaign &middot; Generated Jul 8, 2026 &middot; 47 claims analyzed</div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-primary">Export Report</button>
+            <button class="btn btn-gray">Re-verify All</button>
+        </div>
+    </div>
+
+    <div class="summary-cards">
+        <div class="sum-card"><div class="sum-num">47</div><div class="sum-label">Claims Checked</div></div>
+        <div class="sum-card"><div class="sum-num" style="color: var(--green);">&check; 44</div><div class="sum-label">Supported</div></div>
+        <div class="sum-card"><div class="sum-num" style="color: var(--amber);">&xwarning; 3</div><div class="sum-label">Unsupported</div></div>
+        <div class="sum-card"><div class="sum-num" style="color: var(--red);">⚡ 1</div><div class="sum-label">Conflicts</div></div>
+        <div class="sum-card"><div class="sum-num" style="color: var(--blue-gray);">⏱ 6</div><div class="sum-label">Time-Sensitive</div></div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-pill active">All 47</div>
+        <div class="filter-pill">Supported 44</div>
+        <div class="filter-pill">Unsupported 3</div>
+        <div class="filter-pill">Conflicts 1</div>
+        <div class="filter-pill">Time-Sensitive 6</div>
+    </div>
+
+    <div class="main-area">
+        <div class="table-area">
+            <table>
+                <thead>
+                    <tr><th>#</th><th>Claim</th><th>Used In</th><th>Source</th><th>Type</th><th>Confidence</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="left-stripe">1</td>
+                        <td>"OKX.AI processes 2M+ daily transactions"</td>
+                        <td>Thread D1, Article #3</td>
+                        <td>OKX Q2 Stats</td>
+                        <td>Official Report</td>
+                        <td><div class="mini-bar-wrap"><div class="mini-bar"><div class="mini-bar-fill" style="width:98%; background:var(--green)"></div></div> 98%</div></td>
+                        <td><span class="status-pill st-green">&check; Supported</span></td>
+                    </tr>
+                    <tr>
+                        <td class="left-stripe">2</td>
+                        <td>"Web3 content engagement fell 34% in H2 2024"</td>
+                        <td>Newsletter #2, Hook #5</td>
+                        <td>Messari H1 2025</td>
+                        <td>Research Report</td>
+                        <td><div class="mini-bar-wrap"><div class="mini-bar"><div class="mini-bar-fill" style="width:91%; background:var(--green)"></div></div> 91%</div></td>
+                        <td><span class="status-pill st-green">&check; Supported</span></td>
+                    </tr>
+                    <tr>
+                        <td class="left-stripe">3</td>
+                        <td>"Electric Capital: 23K monthly active devs"</td>
+                        <td>Article outline</td>
+                        <td>Electric Capital</td>
+                        <td>Research</td>
+                        <td><div class="mini-bar-wrap"><div class="mini-bar"><div class="mini-bar-fill" style="width:87%; background:var(--green)"></div></div> 87%</div></td>
+                        <td><span class="status-pill st-green">&check; Supported</span></td>
+                    </tr>
+                    <tr>
+                        <td class="left-stripe">4</td>
+                        <td>"OKX API has 99.97% uptime SLA"</td>
+                        <td>Technical thread</td>
+                        <td>OKX Docs</td>
+                        <td>Official</td>
+                        <td><div class="mini-bar-wrap"><div class="mini-bar"><div class="mini-bar-fill" style="width:99%; background:var(--green)"></div></div> 99%</div></td>
+                        <td><span class="status-pill st-green">&check; Supported</span></td>
+                    </tr>
+                    <tr>
+                        <td class="left-stripe stripe-blue">5</td>
+                        <td>"Web3 market cap hit $2.8T in Q1 2025"</td>
+                        <td>Article #1</td>
+                        <td>CoinGecko</td>
+                        <td>Aggregator</td>
+                        <td><div class="mini-bar-wrap"><div class="mini-bar"><div class="mini-bar-fill" style="width:82%; background:var(--green)"></div></div> 82%</div></td>
+                        <td><span class="status-pill st-blue">⏱ Time-Sensitive</span></td>
+                    </tr>
+                    <tr>
+                        <td class="left-stripe stripe-amber">6</td>
+                        <td>"Developer adoption doubled YoY"</td>
+                        <td>Article #2</td>
+                        <td>Internal blog</td>
+                        <td>Secondary</td>
+                        <td><div class="mini-bar-wrap"><div class="mini-bar"><div class="mini-bar-fill" style="width:67%; background:var(--amber)"></div></div> 67%</div></td>
+                        <td><span class="status-pill st-amber">🔍 Needs Review</span></td>
+                    </tr>
+                    <tr class="selected">
+                        <td class="left-stripe stripe-red">7</td>
+                        <td>"AI reduces content ops cost by 10&times;"</td>
+                        <td>LinkedIn #4, Hook #8</td>
+                        <td>&mdash;</td>
+                        <td>Unverified</td>
+                        <td><div class="mini-bar-wrap"><div class="mini-bar"><div class="mini-bar-fill" style="width:12%; background:var(--red)"></div></div> 12%</div></td>
+                        <td><span class="status-pill st-amber">&xwarning; Unsupported</span></td>
+                    </tr>
+                    <tr>
+                        <td class="left-stripe stripe-red">8</td>
+                        <td>"Competitor X lost 34% market share"</td>
+                        <td>Thread #3</td>
+                        <td>Forum post</td>
+                        <td>Anecdotal</td>
+                        <td><div class="mini-bar-wrap"><div class="mini-bar"><div class="mini-bar-fill" style="width:23%; background:var(--red)"></div></div> 23%</div></td>
+                        <td><span class="status-pill st-red">&xwarning; Unsupported</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="right-drawer">
+            <div class="drawer-header">
+                Claim Detail <span style="color:var(--muted); font-weight:normal; cursor:pointer;">&times;</span>
+            </div>
+
+            <div class="claim-detail-box">
+                "AI reduces content ops cost by 10&times;"
+            </div>
+
+            <div class="section-label">Source</div>
+            <div class="callout-amber">&xwarning; No primary source found</div>
+
+            <div class="section-label">Nearest Match</div>
+            <div class="quote-box">
+                "Gartner estimates 40&ndash;60% cost reduction for AI-assisted content workflows (2025 report)..."
+                <span class="quote-src">&mdash; gartner.com/ai-content-2025 🔗</span>
+            </div>
+
+            <div class="detail-row">
+                <span style="color:var(--muted);">Last Verified</span>
+                <span>Jul 8, 2026 14:32 UTC</span>
+            </div>
+            <div class="detail-row" style="align-items:center;">
+                <span style="color:var(--muted);">Confidence Score</span>
+                <span style="display:flex; align-items:center; gap:8px;">
+                    <div class="mini-bar" style="width:100px;"><div class="mini-bar-fill" style="width:12%; background:var(--red)"></div></div> 12%
+                </span>
+            </div>
+            <div class="detail-row">
+                <span style="color:var(--muted);">Used In</span>
+                <span style="display:flex; gap:4px;">
+                    <span class="filter-pill" style="padding:2px 6px;">LinkedIn Post #4</span>
+                    <span class="filter-pill" style="padding:2px 6px;">Hook #8</span>
+                </span>
+            </div>
+
+            <div class="reco-box">
+                <strong>Recommendation:</strong> Replace with a quantified primary-sourced stat. Suggested: cite Gartner 40&ndash;60% range, or remove the claim entirely to maintain proof integrity.
+            </div>
+
+            <div class="action-btns">
+                <button class="act-btn btn-green-solid">Mark Reviewed</button>
+                <button class="act-btn btn-amber-out">Flag for Revision</button>
+                <button class="act-btn btn-gray-out">Regenerate Claim</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

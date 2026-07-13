@@ -1,0 +1,494 @@
+import { z } from "zod";
+
+export const PlatformSchema = z.enum(["X", "LinkedIn", "Newsletter", "Discord", "Mirror", "Medium"]);
+export const ClaimStatusSchema = z.enum(["supported", "unsupported", "conflict", "time-sensitive"]);
+export const EditorialProfileSchema = z.enum(["balanced", "technical-authority", "founder-led", "direct-growth"]);
+export const EditorialModeSchema = z.enum([
+  "direct-practical",
+  "technical-explainer",
+  "point-of-view",
+  "storytelling",
+  "how-to",
+  "proof-led",
+  "comparison",
+  "community"
+]);
+export const ContentFormatSchema = z.enum([
+  "short-post",
+  "thread",
+  "article",
+  "newsletter",
+  "community-post"
+]);
+
+export const ProjectBriefSchema = z.object({
+  brand: z.string().min(2),
+  industry: z.string().min(2),
+  website: z.string().url().or(z.literal("")),
+  docs: z.string().optional().default(""),
+  goal: z.string().min(5),
+  audience: z.string().min(3),
+  competitors: z.array(z.string()).default([]),
+  platforms: z.array(PlatformSchema).default(["X", "LinkedIn"]),
+  editorialProfile: EditorialProfileSchema.default("balanced"),
+  tone: z.string().min(2),
+  durationDays: z.number().int().min(7).max(90),
+  postsPerWeek: z.number().int().min(1).max(20),
+  teamSize: z.number().int().min(1).max(20),
+  hoursPerWeek: z.number().int().min(1).max(80),
+  restrictions: z.string().optional().default("")
+});
+
+export const SourceDocumentSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  url: z.string().optional(),
+  sourceType: z.enum(["primary-doc", "website", "competitor", "prompt-library", "user-note"]),
+  extractedText: z.string(),
+  fetchedAt: z.string(),
+  fetchStatus: z.enum(["fetched", "unfetched", "failed"]).default("unfetched"),
+  wordCount: z.number().int().nonnegative().default(0),
+  sourceQuality: z.enum(["strong", "limited", "none"]).default("none"),
+  failureReason: z.string().optional()
+});
+
+export const BrandContextSchema = z.object({
+  positioning: z.string(),
+  voice: z.array(z.string()),
+  verifiedClaims: z.array(z.string()),
+  prohibitedClaims: z.array(z.string()),
+  contentGoals: z.array(z.string())
+});
+
+export const ContentGapSchema = z.object({
+  id: z.string(),
+  type: z.enum(["topic", "audience", "format", "tone", "saturated-narrative"]),
+  name: z.string(),
+  evidence: z.string(),
+  recommendation: z.string(),
+  priority: z.enum(["high", "medium", "low"])
+});
+
+export const ContentLandscapeSchema = z.object({
+  summary: z.string().default(""),
+  competitorPatterns: z.array(z.string()).default([]),
+  saturatedNarratives: z.array(z.string()).default([]),
+  opportunityGaps: z.array(ContentGapSchema).default([]),
+  formatGaps: z.array(ContentGapSchema).default([]),
+  toneGaps: z.array(ContentGapSchema).default([]),
+  platformInsights: z.array(z.object({
+    platform: PlatformSchema,
+    insight: z.string(),
+    opportunity: z.string()
+  })).default([])
+}).default({
+  summary: "",
+  competitorPatterns: [],
+  saturatedNarratives: [],
+  opportunityGaps: [],
+  formatGaps: [],
+  toneGaps: [],
+  platformInsights: []
+});
+
+export const AudienceSegmentSchema = z.object({
+  name: z.string(),
+  awarenessLevel: z.string(),
+  needs: z.array(z.string()),
+  objections: z.array(z.string()),
+  cta: z.string(),
+  messagePositioning: z.string().default(""),
+  emotionalTone: z.string().default(""),
+  proofPoints: z.array(z.string()).default([]),
+  tabooTopics: z.array(z.string()).default([]),
+  formatPreferences: z.array(z.string()).default([]),
+  primaryPlatform: PlatformSchema.nullable().optional(),
+  cadence: z.string().default(""),
+  timing: z.string().default("")
+});
+
+export const ContentTerritorySchema = z.object({
+  id: z.string().default(""),
+  name: z.string(),
+  rationale: z.string(),
+  sampleAngles: z.array(z.string()),
+  ownedGap: z.string().default(""),
+  audienceSegments: z.array(z.string()).default([]),
+  proofAngle: z.string().default("")
+});
+
+export const HookSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  triggerType: z.string(),
+  platform: PlatformSchema,
+  audienceSegment: z.string(),
+  goal: z.string(),
+  emotionalDriver: z.string().default(""),
+  contentTerritory: z.string().default(""),
+  formatPairing: z.string().default(""),
+  testHypothesis: z.string().default(""),
+  platformFitReason: z.string().default("")
+});
+
+export const ContentSeriesSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  territory: z.string(),
+  targetSegment: z.string(),
+  narrativeArc: z.string(),
+  episodes: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    role: z.string(),
+    formats: z.array(z.string())
+  })),
+  repurposingMap: z.array(z.string()).default([]),
+  amplificationPlan: z.array(z.string()).default([])
+});
+
+export const PlatformAdaptationSchema = z.object({
+  platform: PlatformSchema,
+  role: z.string(),
+  strongestHookIds: z.array(z.string()),
+  reasoning: z.string(),
+  formatPairings: z.array(z.string()),
+  ctaStyle: z.string()
+});
+
+export const CalendarItemSchema = z.object({
+  id: z.string(),
+  day: z.number().int(),
+  platform: PlatformSchema,
+  format: z.string(),
+  audienceSegment: z.string(),
+  hook: z.string(),
+  sourcePack: z.array(z.string()),
+  goal: z.string(),
+  territory: z.string().default(""),
+  series: z.string().default(""),
+  episode: z.string().default(""),
+  hookId: z.string().default(""),
+  platformFitReason: z.string().default(""),
+  cta: z.string().default(""),
+  productionTaskId: z.string().default("")
+});
+
+export const ArticleSectionSchema = z.object({
+  heading: z.string(),
+  body: z.string()
+});
+
+export const ArticleContentSchema = z.object({
+  subtitle: z.string(),
+  introduction: z.string(),
+  sections: z.array(ArticleSectionSchema),
+  conclusion: z.string(),
+  tags: z.array(z.string())
+});
+
+export const ContentAssetSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  platform: PlatformSchema,
+  title: z.string(),
+  copy: z.string(),
+  cta: z.string(),
+  linkedClaims: z.array(z.string()),
+  calendarItemId: z.string().default(""),
+  seriesId: z.string().default(""),
+  segment: z.string().default(""),
+  territory: z.string().default(""),
+  hookId: z.string().default(""),
+  editorialMode: EditorialModeSchema.default("direct-practical"),
+  contentFormat: ContentFormatSchema.default("short-post"),
+  threadPosts: z.array(z.string()).default([]),
+  article: ArticleContentSchema.nullable().default(null),
+  visualBriefId: z.string().default("")
+});
+
+export const EditorialMixItemSchema = z.object({
+  mode: EditorialModeSchema,
+  percentage: z.number().int().min(0).max(100),
+  rationale: z.string()
+});
+
+export const EditorialReportSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  passed: z.boolean(),
+  issueCount: z.number().int().nonnegative(),
+  strengths: z.array(z.string()),
+  rewriteSummary: z.string()
+});
+
+export const VisualBriefSchema = z.object({
+  id: z.string(),
+  assetId: z.string(),
+  visualType: z.enum(["editorial-illustration", "concept-diagram", "data-chart", "comparison", "workflow"]),
+  purpose: z.string(),
+  keyMessage: z.string(),
+  dataPoints: z.array(z.string()),
+  prompt: z.string(),
+  aspectRatio: z.enum(["1:1", "16:9", "4:5"]),
+  altText: z.string(),
+  sourceIds: z.array(z.string()),
+  status: z.enum(["planned", "generated", "failed"]).default("planned")
+});
+
+const PerformanceMetricSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+
+export const PerformanceInputSchema = z.object({
+  assetId: z.string().min(1),
+  impressions: PerformanceMetricSchema.default(0),
+  views: PerformanceMetricSchema.default(0),
+  engagements: PerformanceMetricSchema.default(0),
+  clicks: PerformanceMetricSchema.default(0),
+  conversions: PerformanceMetricSchema.default(0),
+  watchTimeSeconds: PerformanceMetricSchema.default(0),
+  notes: z.string().trim().max(1000).default("")
+});
+
+export const PerformanceRecordSchema = PerformanceInputSchema.extend({
+  id: z.string(),
+  campaignId: z.string(),
+  platform: PlatformSchema,
+  assetTitle: z.string(),
+  assetType: z.string(),
+  hookId: z.string(),
+  territory: z.string(),
+  updatedAt: z.string()
+});
+
+export const PerformancePatternSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  records: z.number().int().nonnegative(),
+  impressions: PerformanceMetricSchema,
+  engagements: PerformanceMetricSchema,
+  clicks: PerformanceMetricSchema,
+  conversions: PerformanceMetricSchema,
+  engagementRate: z.number().nonnegative(),
+  clickThroughRate: z.number().nonnegative(),
+  conversionRate: z.number().nonnegative()
+});
+
+export const PerformanceContextSchema = z.object({
+  brand: z.string(),
+  recordCount: z.number().int().nonnegative(),
+  campaignCount: z.number().int().nonnegative(),
+  totals: z.object({
+    impressions: PerformanceMetricSchema,
+    views: PerformanceMetricSchema,
+    engagements: PerformanceMetricSchema,
+    clicks: PerformanceMetricSchema,
+    conversions: PerformanceMetricSchema,
+    watchTimeSeconds: PerformanceMetricSchema
+  }),
+  rates: z.object({
+    viewRate: z.number().nonnegative(),
+    engagementRate: z.number().nonnegative(),
+    clickThroughRate: z.number().nonnegative(),
+    conversionRate: z.number().nonnegative(),
+    averageWatchTimeSeconds: z.number().nonnegative()
+  }),
+  topAssets: z.array(z.object({
+    assetId: z.string(),
+    title: z.string(),
+    platform: PlatformSchema,
+    hookId: z.string(),
+    territory: z.string(),
+    impressions: PerformanceMetricSchema,
+    engagementRate: z.number().nonnegative(),
+    clickThroughRate: z.number().nonnegative(),
+    conversions: PerformanceMetricSchema
+  })),
+  platformPatterns: z.array(PerformancePatternSchema),
+  hookPatterns: z.array(PerformancePatternSchema),
+  territoryPatterns: z.array(PerformancePatternSchema),
+  learnings: z.array(z.string())
+});
+
+export const ClaimSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  contentUsedIn: z.string(),
+  sourceId: z.string().optional(),
+  sourceTitle: z.string().optional(),
+  sourceType: z.string().optional(),
+  confidence: z.number().min(0).max(100),
+  status: ClaimStatusSchema,
+  recommendation: z.string(),
+  resolutionStatus: z.enum(["unresolved", "repaired"]).default("unresolved"),
+  repairAction: z.enum(["removed", "replaced-with-supported"]).nullable().default(null),
+  repairNote: z.string().default(""),
+  repairedAt: z.string().nullable().default(null)
+});
+
+export const ProofReportSchema = z.object({
+  checkedClaims: z.number(),
+  supported: z.number(),
+  unsupported: z.number(),
+  conflicts: z.number(),
+  timeSensitive: z.number(),
+  claims: z.array(ClaimSchema)
+});
+
+export const ProductionPlanSchema = z.object({
+  totalHours: z.string(),
+  capacitySummary: z.string().default(""),
+  overloadRisk: z.enum(["low", "medium", "high"]).default("low"),
+  warnings: z.array(z.string()).default([]),
+  roleAssignments: z.array(z.object({
+    role: z.string(),
+    ownerCount: z.number().int().min(1),
+    hours: z.string(),
+    responsibilities: z.array(z.string())
+  })).default([]),
+  steps: z.array(z.object({
+    id: z.string().default(""),
+    day: z.string(),
+    task: z.string(),
+    estimate: z.string(),
+    role: z.string().default(""),
+    linkedCalendarIds: z.array(z.string()).default([])
+  }))
+});
+
+export const ListingServiceSchema = z.object({
+  name: z.string(),
+  type: z.literal("A2A"),
+  fee: z.string(),
+  description: z.string(),
+  requiredInputs: z.array(z.string()),
+  deliverables: z.array(z.string())
+});
+
+export const PromptRouteSchema = z.object({
+  pipelineStage: z.string(),
+  selectedPromptId: z.string(),
+  selectedPromptName: z.string(),
+  libraryStage: z.string(),
+  matchScore: z.number().nonnegative(),
+  reason: z.string(),
+  tags: z.array(z.string()),
+  promptPreview: z.string()
+});
+
+export const PromptModuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  libraryStage: z.string(),
+  useCase: z.string(),
+  capability: z.string(),
+  outputArtifact: z.string(),
+  dependsOn: z.array(z.string()),
+  usedInMvp: z.boolean(),
+  tags: z.array(z.string())
+});
+
+export const PromptLibrarySummarySchema = z.object({
+  loaded: z.boolean(),
+  sourceFile: z.string(),
+  totalPrompts: z.number().int().nonnegative(),
+  routedStages: z.number().int().nonnegative(),
+  routerVersion: z.string()
+});
+
+export const GenerationMetadataSchema = z.object({
+  provider: z.string(),
+  model: z.string(),
+  mode: z.literal("llm"),
+  generatedAt: z.string()
+});
+
+export const GenerationStageSchema = z.object({
+  stage: z.enum(["foundation", "architecture", "execution", "editorial", "governance"]),
+  label: z.string(),
+  status: z.literal("completed"),
+  startedAt: z.string(),
+  completedAt: z.string(),
+  durationMs: z.number().int().nonnegative(),
+  outputKeys: z.array(z.string())
+});
+
+export const DeliveryPackSchema = z.object({
+  brief: ProjectBriefSchema,
+  sources: z.array(SourceDocumentSchema),
+  brandContext: BrandContextSchema,
+  contentLandscape: ContentLandscapeSchema,
+  audienceSegments: z.array(AudienceSegmentSchema),
+  territories: z.array(ContentTerritorySchema),
+  hooks: z.array(HookSchema),
+  contentSeries: z.array(ContentSeriesSchema).default([]),
+  platformAdaptations: z.array(PlatformAdaptationSchema).default([]),
+  editorialMix: z.array(EditorialMixItemSchema).default([]),
+  calendar: z.array(CalendarItemSchema),
+  draftAssets: z.array(ContentAssetSchema).default([]),
+  assets: z.array(ContentAssetSchema),
+  editorialReport: EditorialReportSchema.default({
+    score: 0,
+    passed: false,
+    issueCount: 0,
+    strengths: [],
+    rewriteSummary: ""
+  }),
+  visualBriefs: z.array(VisualBriefSchema).default([]),
+  performanceContext: PerformanceContextSchema.default({
+    brand: "",
+    recordCount: 0,
+    campaignCount: 0,
+    totals: { impressions: 0, views: 0, engagements: 0, clicks: 0, conversions: 0, watchTimeSeconds: 0 },
+    rates: { viewRate: 0, engagementRate: 0, clickThroughRate: 0, conversionRate: 0, averageWatchTimeSeconds: 0 },
+    topAssets: [],
+    platformPatterns: [],
+    hookPatterns: [],
+    territoryPatterns: [],
+    learnings: []
+  }),
+  proofReport: ProofReportSchema,
+  promptLibrary: PromptLibrarySummarySchema,
+  promptRoutes: z.array(PromptRouteSchema),
+  promptModules: z.array(PromptModuleSchema).default([]),
+  generation: GenerationMetadataSchema,
+  generationStages: z.array(GenerationStageSchema).default([]),
+  productionPlan: ProductionPlanSchema,
+  listing: z.object({
+    aspName: z.string(),
+    description: z.string(),
+    services: z.array(ListingServiceSchema),
+    checklist: z.array(z.object({
+      label: z.string(),
+      complete: z.boolean()
+    }))
+  })
+});
+
+export type ProjectBrief = z.infer<typeof ProjectBriefSchema>;
+export type EditorialProfile = z.infer<typeof EditorialProfileSchema>;
+export type EditorialMode = z.infer<typeof EditorialModeSchema>;
+export type ContentFormat = z.infer<typeof ContentFormatSchema>;
+export type SourceDocument = z.infer<typeof SourceDocumentSchema>;
+export type BrandContext = z.infer<typeof BrandContextSchema>;
+export type ContentGap = z.infer<typeof ContentGapSchema>;
+export type ContentLandscape = z.infer<typeof ContentLandscapeSchema>;
+export type AudienceSegment = z.infer<typeof AudienceSegmentSchema>;
+export type ContentTerritory = z.infer<typeof ContentTerritorySchema>;
+export type Hook = z.infer<typeof HookSchema>;
+export type ContentSeries = z.infer<typeof ContentSeriesSchema>;
+export type PlatformAdaptation = z.infer<typeof PlatformAdaptationSchema>;
+export type CalendarItem = z.infer<typeof CalendarItemSchema>;
+export type ContentAsset = z.infer<typeof ContentAssetSchema>;
+export type EditorialMixItem = z.infer<typeof EditorialMixItemSchema>;
+export type EditorialReport = z.infer<typeof EditorialReportSchema>;
+export type VisualBrief = z.infer<typeof VisualBriefSchema>;
+export type PerformanceInput = z.infer<typeof PerformanceInputSchema>;
+export type PerformanceRecord = z.infer<typeof PerformanceRecordSchema>;
+export type PerformancePattern = z.infer<typeof PerformancePatternSchema>;
+export type PerformanceContext = z.infer<typeof PerformanceContextSchema>;
+export type Claim = z.infer<typeof ClaimSchema>;
+export type ProofReport = z.infer<typeof ProofReportSchema>;
+export type PromptRoute = z.infer<typeof PromptRouteSchema>;
+export type PromptModule = z.infer<typeof PromptModuleSchema>;
+export type PromptLibrarySummary = z.infer<typeof PromptLibrarySummarySchema>;
+export type GenerationStage = z.infer<typeof GenerationStageSchema>;
+export type DeliveryPack = z.infer<typeof DeliveryPackSchema>;

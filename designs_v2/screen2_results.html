@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Engineer - Campaign Results</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --green: #16A34A;
+            --green-light: #F0FDF4;
+            --green-border: #BBF7D0;
+            --charcoal: #111827;
+            --body: #374151;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+            --surface: #F9FAFB;
+            --amber: #D97706;
+            --amber-bg: #FFFBEB;
+            --amber-border: #FDE68A;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: #fff; color: var(--body); height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: 13px; }
+
+        .top-nav { height: 48px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+        .nav-left { display: flex; align-items: center; gap: 12px; font-weight: 600; color: var(--charcoal); font-size: 14px; }
+        .logo-box { width: 16px; height: 16px; background: var(--charcoal); border-radius: 4px; }
+        .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--charcoal); }
+
+        .page-header { padding: 20px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .page-title { font-size: 22px; font-weight: 700; color: var(--charcoal); margin-bottom: 4px; }
+        .page-sub { color: var(--muted); margin-bottom: 12px; }
+        .tags-row { display: flex; gap: 8px; }
+        .pill { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+        .pill.green { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); }
+        .pill.gray { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+
+        .btn-group { display: flex; gap: 8px; }
+        .btn { height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--border); background: white; color: var(--body); font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .btn:hover { background: var(--surface); }
+
+        .tab-bar { height: 44px; padding: 0 32px; border-bottom: 1px solid var(--border); display: flex; gap: 24px; align-items: flex-end; flex-shrink: 0; }
+        .tab { padding-bottom: 12px; font-size: 13px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab.active { color: var(--charcoal); font-weight: 600; border-bottom-color: var(--green); }
+
+        .main-area { display: flex; flex-grow: 1; overflow: hidden; }
+        .content-area { flex-grow: 1; padding: 20px 32px; overflow-y: auto; }
+
+        .section-title { font-size: 16px; font-weight: 600; color: var(--charcoal); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .link { color: var(--green); cursor: pointer; font-size: 13px; font-weight: 500; }
+
+        table { width: 100%; border-collapse: collapse; border: 1px solid var(--border); }
+        th { text-align: left; padding: 10px 12px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--body); }
+        tr:nth-child(even) { background: #FAFAFA; }
+
+        .plat-pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; color: white; }
+        .plat-x { background: black; }
+        .plat-li { background: #0A66C2; }
+        .plat-news { background: #6B7280; }
+        .plat-dis { background: #5865F2; }
+        .plat-mir { background: #111827; }
+
+        .format-badge { background: var(--surface); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-size: 11px; color: var(--body); }
+        .goal-pill { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+        .goal-aw { background: #EFF6FF; color: #1D4ED8; }
+        .goal-ld { background: #F3E8FF; color: #7E22CE; }
+        .goal-rt { background: #F0FDF4; color: #15803D; }
+        .goal-cv { background: #FFF7ED; color: #C2410C; }
+        .goal-eg { background: #F0FDFA; color: #0F766E; }
+        .goal-at { background: #EEF2FF; color: #4338CA; }
+        .goal-cm { background: #FFF1F2; color: #BE123C; }
+
+        .right-rail { width: 280px; border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; background: white; flex-shrink: 0; }
+        .rail-header { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+
+        .source-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+        .src-title { font-size: 13px; font-weight: 600; color: var(--charcoal); margin-bottom: 4px; }
+        .src-domain { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+        .conf-bar { width: 100%; height: 6px; background: var(--surface); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+        .conf-fill { height: 100%; background: var(--green); }
+        .conf-fill.amber { background: var(--amber); }
+        .src-date { font-size: 11px; color: var(--muted); }
+
+        .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+        .warning-card { background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: 8px; padding: 12px; margin-bottom: 8px; color: var(--charcoal); font-size: 12px; }
+
+        .lineage { font-family: monospace; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <div class="nav-left">
+            <div class="logo-box"></div> Content Engineer
+        </div>
+        <div style="color: var(--muted);">Projects &rsaquo; OKX.AI Q3 &rsaquo; Results</div>
+        <div style="display: flex; gap:16px; align-items:center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <div class="avatar">AK</div>
+        </div>
+    </div>
+
+    <div class="page-header">
+        <div>
+            <div class="page-title">OKX.AI Q3 Awareness Campaign</div>
+            <div class="page-sub">Drive developer adoption for OKX.AI marketplace &middot; 30 days &middot; 4 platforms</div>
+            <div class="tags-row">
+                <span class="pill green">&check; Proof Checked</span>
+                <span class="pill gray">47 claims</span>
+                <span class="pill gray">23 sources</span>
+                <span class="pill gray">Generated Jul 8 2026</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <button class="btn">&darr; PDF</button>
+            <button class="btn">{ } JSON</button>
+            <button class="btn">&copy; Copy</button>
+            <button class="btn">&nearr; Share</button>
+        </div>
+    </div>
+
+    <div class="tab-bar">
+        <div class="tab">Strategy</div>
+        <div class="tab">Audience</div>
+        <div class="tab">Hooks</div>
+        <div class="tab active">Calendar</div>
+        <div class="tab">Content Pack</div>
+        <div class="tab">Proof Report</div>
+        <div class="tab">Production Plan</div>
+    </div>
+
+    <div class="main-area">
+        <div class="content-area">
+            <div class="section-title">
+                30-Day Content Calendar <span class="link">Export CSV</span>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>Day</th><th>Platform</th><th>Format</th><th>Audience Segment</th><th>Hook</th><th>Source Pack</th><th>Goal</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>1</td><td><span class="plat-pill plat-x">X</span></td><td><span class="format-badge">Thread</span></td><td>Web3 Devs</td><td>"Why most AI content fails the evidence test"</td><td>WP#3 Blog#7</td><td><span class="goal-pill goal-aw">Awareness</span></td></tr>
+                    <tr><td>2</td><td><span class="plat-pill plat-li">LinkedIn</span></td><td><span class="format-badge">Article</span></td><td>Growth Teams</td><td>"The content gap in Web3 nobody talks about"</td><td>Compet Rpt</td><td><span class="goal-pill goal-ld">Leadership</span></td></tr>
+                    <tr><td>3</td><td><span class="plat-pill plat-news">Newsletter</span></td><td><span class="format-badge">Digest</span></td><td>Community</td><td>"Weekly: AI tools that actually ship"</td><td>Curated</td><td><span class="goal-pill goal-rt">Retention</span></td></tr>
+                    <tr><td>4</td><td><span class="plat-pill plat-dis">Discord</span></td><td><span class="format-badge">AMA Brief</span></td><td>Builders</td><td>"Building in bear: the content playbook"</td><td>Forum Data</td><td><span class="goal-pill goal-cm">Community</span></td></tr>
+                    <tr><td>5</td><td><span class="plat-pill plat-x">X</span></td><td><span class="format-badge">Single Post</span></td><td>Investors</td><td>"Data-backed: OKX.AI vs alternatives"</td><td>Messari Q2</td><td><span class="goal-pill goal-cv">Conversion</span></td></tr>
+                    <tr><td>6</td><td><span class="plat-pill plat-li">LinkedIn</span></td><td><span class="format-badge">Poll</span></td><td>HR/Talent</td><td>"Does your team have a content engineer?"</td><td>Survey</td><td><span class="goal-pill goal-eg">Engagement</span></td></tr>
+                    <tr><td>7</td><td><span class="plat-pill plat-mir">Mirror</span></td><td><span class="format-badge">Essay</span></td><td>Researchers</td><td>"Why evidence-backed content wins in Web3"</td><td>Academic</td><td><span class="goal-pill goal-at">Authority</span></td></tr>
+                    <tr><td>8</td><td><span class="plat-pill plat-x">X</span></td><td><span class="format-badge">Thread</span></td><td>Web3 Devs</td><td>"5 signals a project is content-mature"</td><td>Internal</td><td><span class="goal-pill goal-aw">Awareness</span></td></tr>
+                    <tr><td>9</td><td><span class="plat-pill plat-news">Newsletter</span></td><td><span class="format-badge">Spotlight</span></td><td>Community</td><td>"Teams using AI content ops"</td><td>Case Study</td><td><span class="goal-pill goal-rt">Retention</span></td></tr>
+                    <tr><td>10</td><td><span class="plat-pill plat-li">LinkedIn</span></td><td><span class="format-badge">Article</span></td><td>Growth</td><td>"Content ROI in crypto: 2025 benchmark"</td><td>Benchmark</td><td><span class="goal-pill goal-ld">Leadership</span></td></tr>
+                    <tr><td>11</td><td><span class="plat-pill plat-x">X</span></td><td><span class="format-badge">Post</span></td><td>Web3 Devs</td><td>"OKX.AI just crossed 2M daily transactions"</td><td>OKX Official</td><td><span class="goal-pill goal-aw">Awareness</span></td></tr>
+                    <tr><td>12</td><td><span class="plat-pill plat-dis">Discord</span></td><td><span class="format-badge">Drop</span></td><td>Builders</td><td>"Exclusive: early access to Campaign Engineer"</td><td>Internal</td><td><span class="goal-pill goal-cv">Conversion</span></td></tr>
+                    <tr><td>13</td><td><span class="plat-pill plat-news">Newsletter</span></td><td><span class="format-badge">Deep Dive</span></td><td>Growth</td><td>"The anatomy of a proof-checked campaign"</td><td>Internal</td><td><span class="goal-pill goal-ld">Leadership</span></td></tr>
+                    <tr><td>14</td><td><span class="plat-pill plat-mir">Mirror</span></td><td><span class="format-badge">Analysis</span></td><td>Researchers</td><td>"Web3 content credibility gap: the data"</td><td>Messari</td><td><span class="goal-pill goal-at">Authority</span></td></tr>
+                    <tr><td>15</td><td><span class="plat-pill plat-li">LinkedIn</span></td><td><span class="format-badge">Carousel</span></td><td>HR/Talent</td><td>"10 roles every AI-native team needs in 2026"</td><td>Survey</td><td><span class="goal-pill goal-eg">Engagement</span></td></tr>
+                </tbody>
+            </table>
+            <div style="text-align: center; margin-top: 16px; color: var(--muted);">Showing 15 of 30 days &mdash; Show all &darr;</div>
+        </div>
+
+        <div class="right-rail">
+            <div class="rail-header">Sources &amp; Confidence</div>
+
+            <div class="source-card">
+                <div class="src-title">OKX Official Q2 2025 Report</div>
+                <div class="src-domain">okx.com</div>
+                <div class="conf-bar"><div class="conf-fill" style="width: 98%;"></div></div>
+                <div class="src-date">Jul 3 2026</div>
+            </div>
+            <div class="source-card">
+                <div class="src-title">Messari Research H1 2025</div>
+                <div class="src-domain">messari.io</div>
+                <div class="conf-bar"><div class="conf-fill" style="width: 91%;"></div></div>
+                <div class="src-date">Jun 28 2026</div>
+            </div>
+            <div class="source-card">
+                <div class="src-title">Electric Capital Dev Report</div>
+                <div class="src-domain">electriccapital.com</div>
+                <div class="conf-bar"><div class="conf-fill" style="width: 87%;"></div></div>
+                <div class="src-date">Jun 15 2026</div>
+            </div>
+            <div class="source-card">
+                <div class="src-title">CoinDesk Market Analysis</div>
+                <div class="src-domain">coindesk.com</div>
+                <div class="conf-bar"><div class="conf-fill amber" style="width: 74%;"></div></div>
+                <div class="src-date">Jun 30 2026</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="rail-header" style="color: var(--amber);">&xwarning; Warnings</div>
+            <div class="warning-card">&xwarning; Claim #14 &mdash; "AI 10&times; cost reduction" needs primary source</div>
+            <div class="warning-card">&xwarning; Claim #27 &mdash; Competitor data from Q3 2024, may be stale</div>
+
+            <div class="divider"></div>
+
+            <div class="rail-header">Content Lineage</div>
+            <div class="lineage">Claim &rarr; Source &rarr; Content piece</div>
+            <div class="lineage">Claim &rarr; Source &rarr; Content piece</div>
+            <div class="lineage">Claim &rarr; Source &rarr; Content piece</div>
+        </div>
+    </div>
+</body>
+</html>

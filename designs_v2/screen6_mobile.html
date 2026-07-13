@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Engineer - Mobile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --green: #16A34A; --green-light: #F0FDF4; --green-border: #BBF7D0;
+            --charcoal: #111827; --body: #374151; --muted: #6B7280;
+            --border: #E5E7EB; --surface: #F9FAFB;
+            --amber: #D97706; --amber-bg: #FFFBEB;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { display: flex; flex-direction: column; background: #e5e5e5; font-size: 14px; color: var(--body); align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+
+        .phone-frame { width: 375px; height: 812px; background: white; border-radius: 40px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; display: flex; flex-direction: column; position: relative; border: 8px solid #111; }
+        .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 25px; background: #111; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; z-index: 100; }
+
+        .top-nav { height: 60px; padding: 0 20px; display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 12px; background: white; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .nav-left { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--charcoal); font-size: 15px; }
+        .logo-box { width: 18px; height: 18px; background: var(--charcoal); border-radius: 4px; }
+
+        .main-scroll { flex-grow: 1; overflow-y: auto; background: var(--surface); }
+
+        .header { padding: 20px; background: white; border-bottom: 1px solid var(--border); }
+        .title { font-size: 20px; font-weight: 700; color: var(--charcoal); margin-bottom: 4px; }
+        .sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.4; }
+        .live-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--green); font-weight: 600; background: var(--green-light); border: 1px solid var(--green-border); padding: 4px 10px; border-radius: 999px; }
+        .live-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .card { background: white; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 20px; margin-top: 16px; }
+
+        .stage-list { position: relative; padding-left: 8px; }
+        .stage-list::before { content: ''; position: absolute; top: 12px; bottom: 30px; left: 18px; width: 2px; background: var(--border); z-index: 1; }
+
+        .stage { display: flex; gap: 12px; margin-bottom: 20px; position: relative; z-index: 2; }
+        .st-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; margin-top: 2px; }
+
+        .stage.complete .st-icon { background: var(--green); color: white; }
+        .stage.running .st-icon { background: white; border: 2px solid var(--green); border-top-color: transparent; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .stage.queued .st-icon { background: white; border: 2px solid var(--border); }
+
+        .st-content { flex-grow: 1; }
+        .st-title { font-size: 15px; font-weight: 600; color: var(--charcoal); margin-bottom: 4px; }
+        .st-desc { font-size: 13px; color: var(--muted); line-height: 1.4; }
+
+        .stage.running .st-title { color: var(--green); }
+        .stage.queued .st-title { color: var(--muted); }
+
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+        .m-val { font-size: 20px; font-weight: 700; color: var(--charcoal); margin-bottom: 2px; }
+        .m-lbl { font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+        .alert { background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: 8px; padding: 12px; display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--charcoal); }
+
+        .bottom-bar { background: white; border-top: 1px solid var(--border); padding: 12px 20px 24px; display: flex; gap: 12px; flex-shrink: 0; }
+        .btn { flex: 1; height: 44px; border-radius: 8px; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .btn-outline { border: 1px solid var(--border); background: white; color: var(--body); }
+        .btn-primary { border: 1px solid var(--green); background: var(--green); color: white; }
+
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="notch"></div>
+
+        <div class="top-nav">
+            <div class="nav-left"><div class="logo-box"></div> OKX.AI</div>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </div>
+
+        <div class="main-scroll">
+            <div class="header">
+                <div class="title">Q3 Awareness Campaign</div>
+                <div class="sub">Generating 30-day evidence-backed campaign pack...</div>
+                <div class="live-badge"><div class="live-dot"></div> Live Generation &middot; 40%</div>
+            </div>
+
+            <div class="card" style="border-top: none; margin-top: 0; padding-top: 0;">
+                <div style="font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 16px;">Proof Layer</div>
+                <div class="metrics-grid">
+                    <div class="metric-card"><div class="m-val">47</div><div class="m-lbl">Claims Checked</div></div>
+                    <div class="metric-card"><div class="m-val" style="color:var(--green);">94%</div><div class="m-lbl">Confidence</div></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 20px;">Pipeline</div>
+
+                <div class="stage-list">
+
+                    <div class="stage complete">
+                        <div class="st-icon">&check;</div>
+                        <div class="st-content">
+                            <div class="st-title">Context Ingestion</div>
+                            <div class="st-desc">12 sources and 4 docs parsed.</div>
+                        </div>
+                    </div>
+
+                    <div class="stage complete">
+                        <div class="st-icon">&check;</div>
+                        <div class="st-content">
+                            <div class="st-title">Audience &amp; Gaps</div>
+                            <div class="st-desc">4 segments defined, 8 gaps found vs Binance/Coinbase.</div>
+                        </div>
+                    </div>
+
+                    <div class="stage running">
+                        <div class="st-icon"></div>
+                        <div class="st-content">
+                            <div class="st-title">Hook Engineering</div>
+                            <div class="st-desc">14 of 25 hooks generated...</div>
+                        </div>
+                    </div>
+
+                    <div class="stage queued">
+                        <div class="st-icon"></div>
+                        <div class="st-content">
+                            <div class="st-title">Calendar &amp; Production</div>
+                            <div class="st-desc">Waiting for hooks.</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px; border-bottom: none;">
+                <div class="alert">
+                    <span style="font-size: 16px; margin-top: -2px;">&xwarning;</span>
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">User Input Needed</div>
+                        "AI reduces content ops cost by 10&times;" has no primary source. Please provide one or we will rewrite the claim.
+                        <div style="margin-top: 12px; color: var(--amber); font-weight: 600; font-size: 13px;">Review Claim &rarr;</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="bottom-bar">
+            <button class="btn btn-outline">Pause</button>
+            <button class="btn btn-primary">Cancel Run</button>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+[Unit]
+Description=Flusso content engine
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=flusso
+Group=flusso
+WorkingDirectory=/opt/flusso
+Environment=NODE_ENV=production
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=/etc/flusso/flusso.env
+ExecStart=/usr/bin/env node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3107
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGINT
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

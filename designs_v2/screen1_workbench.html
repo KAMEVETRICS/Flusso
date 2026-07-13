@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Engineer - Workbench</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --green: #16A34A;
+            --green-light: #F0FDF4;
+            --green-border: #BBF7D0;
+            --charcoal: #111827;
+            --body: #374151;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+            --surface: #F9FAFB;
+            --amber: #D97706;
+            --red: #DC2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: #fff;
+            color: var(--body);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 13px;
+        }
+
+        /* Top Nav */
+        .top-nav {
+            height: 48px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            flex-shrink: 0;
+            background: #fff;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            color: var(--charcoal);
+            font-size: 14px;
+        }
+
+        .logo-box {
+            width: 16px;
+            height: 16px;
+            background: var(--charcoal);
+            border-radius: 4px;
+        }
+
+        .nav-center {
+            color: var(--muted);
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn-upgrade {
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--charcoal);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--charcoal);
+        }
+
+        /* Main Area */
+        .main-content {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        /* Left Sidebar */
+        .sidebar {
+            width: 288px;
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .section-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .input {
+            width: 100%;
+            height: 36px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0 10px;
+            font-size: 13px;
+            color: var(--charcoal);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input:focus {
+            border-color: var(--green);
+        }
+
+        textarea.input {
+            height: auto;
+            padding: 8px 10px;
+            resize: vertical;
+        }
+
+        .select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236B7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px top 50%;
+            background-size: 8px auto;
+        }
+
+        .tags-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 4px 6px;
+            height: auto;
+            min-height: 36px;
+            align-items: center;
+        }
+
+        .tag {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pill-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .pill {
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: var(--surface);
+            color: var(--body);
+            border: 1px solid var(--border);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .pill.active {
+            background: var(--green);
+            color: white;
+            border-color: var(--green);
+        }
+
+        .segmented-control {
+            display: flex;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            height: 32px;
+        }
+
+        .segment {
+            flex: 1;
+            text-align: center;
+            line-height: 30px;
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--muted);
+        }
+        .segment.active {
+            background: white;
+            color: var(--green);
+            font-weight: 500;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border-radius: 4px;
+            margin: 1px;
+            line-height: 28px;
+        }
+
+        /* Center Panel */
+        .center-panel {
+            flex-grow: 1;
+            padding: 32px;
+            overflow-y: auto;
+            background: #fff;
+        }
+
+        .pipeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 32px;
+        }
+        .pipeline-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--charcoal);
+        }
+
+        .pipeline {
+            position: relative;
+            padding-left: 10px;
+        }
+        .pipeline::before {
+            content: '';
+            position: absolute;
+            top: 24px;
+            bottom: 24px;
+            left: 20px;
+            width: 2px;
+            background: var(--border);
+            z-index: 1;
+        }
+
+        .stage {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            transition: border-color 0.2s;
+        }
+        .stage:hover {
+            border-color: #d1d5db;
+        }
+
+        .stage-circle {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--border);
+            margin-right: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-left: -2px; /* align with the line */
+        }
+        .stage.complete .stage-circle {
+            background: var(--green);
+            border-color: var(--green);
+            color: white;
+        }
+        .stage.running {
+            border-color: var(--green-border);
+            background: var(--green-light);
+        }
+        .stage.running .stage-circle {
+            border-color: var(--green);
+            position: relative;
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+        }
+        .stage.running .stage-circle::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 50%;
+            border: 2px solid var(--green);
+            animation: pulse-ring 2s infinite;
+        }
+
+        .stage-content {
+            display: flex;
+            align-items: baseline;
+            flex-grow: 1;
+            gap: 12px;
+        }
+
+        .stage-num {
+            font-size: 11px;
+            color: var(--muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stage-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--charcoal);
+        }
+
+        .stage.running .stage-name {
+            color: var(--green);
+        }
+
+        .stage-note {
+            font-size: 12px;
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        .stage-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .stage-time {
+            font-size: 12px;
+            color: var(--muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            background: var(--surface);
+            color: var(--muted);
+            border: 1px solid var(--border);
+        }
+        .badge.green {
+            background: var(--green-light);
+            color: var(--green);
+            border-color: var(--green-border);
+        }
+
+        /* Right Panel */
+        .right-panel {
+            width: 300px;
+            border-left: 1px solid var(--border);
+            padding: 24px;
+            overflow-y: auto;
+            flex-shrink: 0;
+            background: #fff;
+        }
+
+        .right-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--charcoal);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            background: white;
+        }
+
+        .stat-val {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--charcoal);
+            margin-bottom: 4px;
+            line-height: 1;
+        }
+        .stat-card.amber .stat-val { color: var(--amber); }
+        .stat-card.green .stat-val { color: var(--green); }
+
+        .stat-lbl {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 24px 0;
+        }
+
+        .claim-row {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--surface);
+            gap: 10px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .dot.green { background: var(--green); }
+        .dot.amber { background: var(--amber); }
+        .dot.red { background: var(--red); }
+
+        .claim-text {
+            flex-grow: 1;
+            font-size: 12px;
+            color: var(--body);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .claim-src {
+            font-size: 11px;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        /* Bottom Bar */
+        .bottom-bar {
+            height: 56px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 24px;
+            gap: 12px;
+            flex-shrink: 0;
+            background: #fff;
+            z-index: 10;
+        }
+
+        .btn {
+            height: 36px;
+            padding: 0 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            background: white;
+            border: 1px solid var(--border);
+            color: var(--body);
+        }
+        .btn-secondary:hover {
+            background: var(--surface);
+        }
+
+        .btn-primary {
+            background: var(--green);
+            border: 1px solid transparent;
+            color: white;
+            font-weight: 600;
+            padding: 0 20px;
+        }
+        .btn-primary:hover {
+            background: #15803d; /* slightly darker green */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Nav -->
+    <div class="top-nav">
+        <div class="nav-left">
+            <div class="logo-box"></div>
+            Content Engineer
+        </div>
+        <div class="nav-center">
+            Projects &rsaquo; New Campaign
+        </div>
+        <div class="nav-right">
+            <button class="btn-upgrade">Upgrade</button>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <div class="avatar">AK</div>
+        </div>
+    </div>
+
+    <!-- Main Flex Container -->
+    <div class="main-content">
+
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <div class="section-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                New Campaign
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Brand Name</label>
+                <input type="text" class="input" value="OKX.AI">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Website / Docs</label>
+                <input type="text" class="input" value="okx.ai/docs">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Competitors</label>
+                <div class="input tags-input">
+                    <div class="tag">Binance <span style="color:#9CA3AF; cursor:pointer;">&times;</span></div>
+                    <div class="tag">Coinbase <span style="color:#9CA3AF; cursor:pointer;">&times;</span></div>
+                    <div class="tag">Bybit <span style="color:#9CA3AF; cursor:pointer;">&times;</span></div>
+                    <input type="text" style="border:none; outline:none; background:transparent; width: 60px; font-size:12px;" placeholder="...">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Campaign Goal</label>
+                <select class="input select">
+                    <option>Developer Adoption</option>
+                    <option>Brand Awareness</option>
+                    <option>User Acquisition</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Target Audience</label>
+                <textarea class="input" rows="3">Web3 developers and growth leads at crypto-native startups</textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Platforms</label>
+                <div class="pill-group" id="platforms">
+                    <div class="pill active">X</div>
+                    <div class="pill active">LinkedIn</div>
+                    <div class="pill">Mirror</div>
+                    <div class="pill">Discord</div>
+                    <div class="pill active">Newsletter</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Tone</label>
+                <div class="segmented-control" id="tone">
+                    <div class="segment">Technical</div>
+                    <div class="segment">Educational</div>
+                    <div class="segment active">Thought Leader</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Duration</label>
+                <div class="pill-group" id="duration">
+                    <div class="pill active">30d</div>
+                    <div class="pill">60d</div>
+                    <div class="pill">90d</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Team Capacity</label>
+                <div class="pill-group" id="capacity">
+                    <div class="pill">S</div>
+                    <div class="pill active">M</div>
+                    <div class="pill">L</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Panel -->
+        <div class="center-panel">
+            <div class="pipeline-header">
+                <div class="pipeline-title">Campaign Pipeline</div>
+                <div style="font-size: 13px; color: var(--muted);">9 stages &middot; ~2h estimated</div>
+            </div>
+
+            <div class="pipeline">
+
+                <!-- Stage 1 -->
+                <div class="stage complete">
+                    <div class="stage-circle">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <div class="stage-content">
+                        <span class="stage-num">01</span>
+                        <span class="stage-name">Context Ingestion</span>
+                        <span class="stage-note">14 sources ingested</span>
+                    </div>
+                    <div class="stage-meta">
+                        <span class="stage-time">0:23</span>
+                        <span class="badge green">Complete</span>
+                    </div>
+                </div>
+
+                <!-- Stage 2 -->
+                <div class="stage complete">
+                    <div class="stage-circle">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <div class="stage-content">
+                        <span class="stage-num">02</span>
+                        <span class="stage-name">Competitive Gap Analysis</span>
+                        <span class="stage-note">8 competitive gaps found</span>
+                    </div>
+                    <div class="stage-meta">
+                        <span class="stage-time">1:47</span>
+                        <span class="badge green">Complete</span>
+                    </div>
+                </div>
+
+                <!-- Stage 3 -->
+                <div class="stage complete">
+                    <div class="stage-circle">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <div class="stage-content">
+                        <span class="stage-num">03</span>
+                        <span class="stage-name">Audience Segmentation</span>
+                        <span class="stage-note">4 segments defined</span>
+                    </div>
+                    <div class="stage-meta">
+                        <span class="stage-time">2:11</span>
+                        <span class="badge green">Complete</span>
+                    </div>
+                </div>
+
+                <!-- Stage 4 -->
+                <div class="stage running">
+                    <div class="stage-circle"></div>
+                    <div class="stage-content">
+                        <span class="stage-num">04</span>
+                        <span class="stage-name">Content Territories</span>
+                        <span class="stage-note" style="color: var(--green);">Mapping content territories...</span>
+                    </div>
+                    <div class="stage-meta">
+                        <span class="badge green" style="display:flex; align-items:center; gap:4px;">
+                            <span class="dot green" style="width:6px; height:6px;"></span> Running
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Stage 5 -->
+                <div class="stage">
+                    <div class="stage-circle"></div>
+                    <div class="stage-content">
+                        <span class="stage-num">05</span>
+                        <span class="stage-name" style="color: var(--muted); font-weight: 500;">Hook Engineering</span>
+                    </div>
+                    <div class="stage-meta">
+                        <span class="badge">Queued</span>
+                    </div>
+                </div>
+
+                <!-- Stage 6 -->
+                <div class="stage">
+                    <div class="stage-circle"></div>
+                    <div class="stage-content">
+                        <span class="stage-num">06</span>
+                        <span class="stage-name" style="color: var(--muted); font-weight: 500;">Calendar Engineering</span>
+                    </div>
+                    <div class="stage-meta">
+                        <span class="badge">Queued</span>
+                    </div>
+                </div>
+
+                <!-- Stage 7 -->
+                <div class="stage">
+                    <div class="stage-circle"></div>
+                    <div class="stage-content">
+                        <span class="stage-num">07</span>
+                        <span class="stage-name" style="color: var(--muted); font-weight: 500;">Content Production</span>
+                    </div>
+                    <div class="stage-meta">
+                        <span class="badge">Queued</span>
+                    </div>
+                </div>
+
+                <!-- Stage 8 -->
+                <div class="stage">
+                    <div class="stage-circle"></div>
+                    <div class="stage-content">
+                        <span class="stage-num">08</span>
+                        <span class="stage-name" style="color: var(--muted); font-weight: 500;">Fact Verification</span>
+                    </div>
+                    <div class="stage-meta">
+                        <span class="badge">Queued</span>
+                    </div>
+                </div>
+
+                <!-- Stage 9 -->
+                <div class="stage">
+                    <div class="stage-circle">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </div>
+                    <div class="stage-content">
+                        <span class="stage-num">09</span>
+                        <span class="stage-name" style="color: var(--muted); font-weight: 500;">Delivery Pack</span>
+                    </div>
+                    <div class="stage-meta">
+                        <span class="badge">Queued</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <div class="right-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+                Proof Layer
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-val">47</div>
+                    <div class="stat-lbl">Claims Checked</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val">23</div>
+                    <div class="stat-lbl">Sources Used</div>
+                </div>
+                <div class="stat-card amber">
+                    <div class="stat-val">3</div>
+                    <div class="stat-lbl">Unsupported</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-val">94%</div>
+                    <div class="stat-lbl">Confidence</div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-label">Recent Claims</div>
+
+            <div class="claim-row">
+                <div class="dot green"></div>
+                <div class="claim-text">OKX.AI processes 2M+ daily txns</div>
+                <div class="claim-src">okx.com</div>
+            </div>
+            <div class="claim-row">
+                <div class="dot green"></div>
+                <div class="claim-text">Web3 dev community grew 41% YoY</div>
+                <div class="claim-src">messari.io</div>
+            </div>
+            <div class="claim-row">
+                <div class="dot amber"></div>
+                <div class="claim-text">AI reduces content cost by 10&times;</div>
+                <div class="claim-src">unverified</div>
+            </div>
+            <div class="claim-row" style="border-bottom:none;">
+                <div class="dot red"></div>
+                <div class="claim-text">Competitor lost 34% market share</div>
+                <div class="claim-src">blog post</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-label">Confidence Trend</div>
+            <svg width="100%" height="40" style="margin-top: 10px;">
+                <rect x="0" y="20" width="16%" height="20" fill="var(--green)" opacity="0.6" rx="2"></rect>
+                <rect x="20%" y="10" width="16%" height="30" fill="var(--green)" opacity="0.7" rx="2"></rect>
+                <rect x="40%" y="25" width="16%" height="15" fill="var(--amber)" opacity="0.8" rx="2"></rect>
+                <rect x="60%" y="5" width="16%" height="35" fill="var(--green)" opacity="0.9" rx="2"></rect>
+                <rect x="80%" y="0" width="16%" height="40" fill="var(--green)" rx="2"></rect>
+            </svg>
+        </div>
+
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <div class="bottom-bar">
+        <button class="btn btn-secondary">Load Demo Project</button>
+        <button class="btn btn-primary">Generate Campaign Pack &rarr;</button>
+    </div>
+
+    <script>
+        // Simple interactivity for pills
+        const makeSelectable = (containerId, singleSelect = false) => {
+            const container = document.getElementById(containerId);
+            const items = container.children;
+            for(let i=0; i<items.length; i++) {
+                items[i].addEventListener('click', function() {
+                    if (singleSelect) {
+                        for(let j=0; j<items.length; j++) items[j].classList.remove('active');
+                        this.classList.add('active');
+                    } else {
+                        this.classList.toggle('active');
+                    }
+                });
+            }
+        };
+
+        makeSelectable('platforms', false);
+        makeSelectable('tone', true);
+        makeSelectable('duration', true);
+        makeSelectable('capacity', true);
+    </script>
+</body>
+</html>
