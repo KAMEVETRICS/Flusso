@@ -6,7 +6,7 @@ APP_USER="flusso"
 APP_GROUP="flusso"
 APP_HOME="/home/flusso"
 CONFIG_DIR="/etc/flusso"
-ENV_FILE="$CONFIG_DIR/content-engine.env"
+ENV_FILE="$CONFIG_DIR/flusso.env"
 
 if [[ "${EUID}" -ne 0 ]]; then
   echo "Run this installer as root." >&2
