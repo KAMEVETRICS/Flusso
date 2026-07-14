@@ -22,7 +22,7 @@ A2A does not require a public content-engine endpoint. Keep port 3107 bound to l
 
 - Ubuntu or another systemd-based Linux distribution
 - Git
-- system-wide Node.js 22.14.0 or newer
+- system-wide Node.js 24 recommended, or Node.js 22.16.0 or newer
 - a GitHub repository containing this project
 - a Neon pooled connection string
 - an OpenAI API key
@@ -61,7 +61,7 @@ Use a private repository or a public repository with no credentials or private c
 
 ## 2. Clone on the VPS
 
-Install Git and Node.js 22.14.0 or newer, then clone:
+Install Git and Node.js 24 (recommended), or Node.js 22.16.0 or newer, then clone:
 
 ~~~bash
 sudo git clone <github-repository-url> /opt/flusso
@@ -106,7 +106,7 @@ Install and initialize one supported Agent runtime under the **flusso** account.
 
 Install the official OKX capability pack through the selected Agent, then register the A2A ASP using the fields in **deploy/LISTING.md**.
 
-The communication runtime requires Node.js 22.14.0 or newer. Install its daemon package:
+The communication runtime requires Node.js 22.16.0 or newer; Node.js 24 is recommended. Install its daemon package:
 
 ~~~bash
 sudo npm install -g @okxweb3/a2a-node@latest

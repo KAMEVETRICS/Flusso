@@ -25,9 +25,12 @@ fi
 
 node -e '
 const [major, minor] = process.versions.node.split(".").map(Number);
-if (major < 22 || (major === 22 && minor < 14)) {
-  console.error("Node.js >= 22.14.0 is required. Found " + process.versions.node + ".");
+if (major < 22 || (major === 22 && minor < 16)) {
+  console.error("Node.js >= 22.16.0 is required. Found " + process.versions.node + ".");
   process.exit(1);
+}
+if (major < 24) {
+  console.warn("Node.js 24 is recommended for the OKX Agent runtime. Found " + process.versions.node + ".");
 }
 '
 
