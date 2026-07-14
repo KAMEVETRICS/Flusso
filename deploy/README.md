@@ -53,7 +53,7 @@ Commit and push to your GitHub repository:
 ~~~bash
 git commit -m "Prepare Flusso for VPS deployment"
 git branch -M main
-git remote add origin <github-repository-url>
+git remote add origin https://github.com/KAMEVETRICS/Flusso.git
 git push -u origin main
 ~~~
 
@@ -64,7 +64,7 @@ Use a private repository or a public repository with no credentials or private c
 Install Git and Node.js 24 (recommended), or Node.js 22.16.0 or newer, then clone:
 
 ~~~bash
-sudo git clone <github-repository-url> /opt/flusso
+sudo git clone https://github.com/KAMEVETRICS/Flusso.git /opt/flusso
 sudo bash /opt/flusso/deploy/install-vps.sh
 ~~~
 
