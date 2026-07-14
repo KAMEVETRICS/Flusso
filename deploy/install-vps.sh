@@ -54,7 +54,13 @@ set -a
 source "$ENV_FILE"
 set +a
 
-for name in OPENAI_API_KEY A2A_INTERNAL_API_KEY DATABASE_URL; do
+for name in \
+  OPENAI_API_KEY \
+  A2A_INTERNAL_API_KEY \
+  DATABASE_URL \
+  CONTENT_ENGINE_URL \
+  A2A_PRICE_FLOOR_USDT \
+  A2A_PRICE_TARGET_USDT; do
   if [[ -z "${!name:-}" ]]; then
     echo "$name is missing from $ENV_FILE." >&2
     exit 1
