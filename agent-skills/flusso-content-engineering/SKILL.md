@@ -26,15 +26,15 @@ Collect brand, industry, source URLs or documents, goal, audience, platforms, to
 
 ## Private engine
 
-Use CONTENT_ENGINE_URL, normally http://127.0.0.1:3107, and send the internal bearer token on every request.
+Use the flusso_content_engine tool for every private engine operation. Never use shell commands, curl, filesystem credentials, or direct environment access.
 
-1. GET /api/internal/a2a/service before autonomous quoting.
-2. POST /api/internal/a2a/quote before every pricing decision.
-3. After agreement, POST /api/internal/a2a/jobs with the OKX job ID, requester Agent ID, complete project brief, and agreed terms.
-4. Do not call the acceptance route from natural-language agreement.
-5. Only after the OKX system emits job_accepted, call POST /api/internal/a2a/jobs/{id}/accepted with { "event": "job_accepted", "okxJobId": "..." }.
-6. Poll GET /api/internal/a2a/jobs/{id} until it is completed or failed.
-7. Read GET /api/internal/a2a/jobs/{id}/result, then fetch each listed format and deliver the files through the OKX.AI task flow.
+1. Call service_policy before autonomous quoting.
+2. Call quote before every pricing decision, passing the request body as payloadJson.
+3. After agreement, call create_job with the OKX job ID, requester Agent ID, complete project brief, and agreed terms in payloadJson.
+4. Do not call accept_job from natural-language agreement.
+5. Only after the OKX system emits job_accepted, call accept_job with the internal job ID and matching event body.
+6. Poll with get_job until it is completed or failed.
+7. Call get_result, then get_export for each listed format and deliver the files through the OKX.AI task flow.
 
 The engine retries generation failures internally. If a job reaches failed, follow the OKX exception escalation flow and wait for an operator decision; do not create a replacement job or repeat delivery commands.
 

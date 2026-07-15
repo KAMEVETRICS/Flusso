@@ -3,6 +3,9 @@
   "name": "Flusso A2A Guard",
   "description": "Persists Flusso A2A turns, requests bounded pricing corrections, and enforces the configured floor before delivery.",
   "activation": { "onStartup": true },
+  "contracts": {
+    "tools": ["flusso_content_engine"]
+  },
   "configSchema": {
     "type": "object",
     "additionalProperties": false

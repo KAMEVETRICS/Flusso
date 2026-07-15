@@ -9,6 +9,7 @@ import {
   isFlussoA2ATurn,
   parseNegotiationRound
 } from "../../lib/openclaw-a2a-guard.mjs";
+import { buildEngineRequest } from "../../lib/openclaw-engine-tool.mjs";
 
 const pluginId = "flusso-a2a-guard";
 const runs = new Map();
@@ -90,11 +91,91 @@ async function persistEvent(api, state, event, error = null) {
   }
 }
 
+const engineToolParameters = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    action: {
+      type: "string",
+      enum: [
+        "service_policy",
+        "quote",
+        "create_job",
+        "accept_job",
+        "get_job",
+        "get_result",
+        "get_export"
+      ]
+    },
+    jobId: { type: "string", description: "Internal Flusso job ID for job operations." },
+    format: {
+      type: "string",
+      enum: ["strategy", "calendar", "content-pack"],
+      description: "Export format for get_export."
+    },
+    payloadJson: {
+      type: "string",
+      description: "JSON object body for quote, create_job, or accept_job."
+    }
+  },
+  required: ["action"]
+};
+
+async function callEngine(params) {
+  const baseUrl = process.env.CONTENT_ENGINE_URL?.trim();
+  const apiKey = process.env.A2A_INTERNAL_API_KEY?.trim();
+  if (!baseUrl || !apiKey) throw new Error("The private Flusso engine is not configured.");
+
+  const request = buildEngineRequest(params);
+  const response = await fetch(new URL(request.path, baseUrl), {
+    method: request.method,
+    headers: {
+      Authorization: "Bearer " + apiKey,
+      ...(request.body ? { "Content-Type": "application/json" } : {})
+    },
+    body: request.body ? JSON.stringify(request.body) : undefined,
+    signal: AbortSignal.timeout(120_000)
+  });
+  const contentType = response.headers.get("content-type") ?? "text/plain";
+  const data = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
+  if (!response.ok) {
+    const detail = data && typeof data === "object" && "error" in data
+      ? String(data.error)
+      : "Request failed.";
+    throw new Error("Flusso content engine returned HTTP " + response.status + ": " + detail);
+  }
+
+  return {
+    content: [{
+      type: "text",
+      text: typeof data === "string" ? data : JSON.stringify(data, null, 2)
+    }],
+    details: {
+      status: response.status,
+      contentType,
+      disposition: response.headers.get("content-disposition")
+    }
+  };
+}
+
 export default definePluginEntry({
   id: pluginId,
   name: "Flusso A2A Guard",
-  description: "Durable A2A turn recovery and hard-floor enforcement for Flusso.",
+  description: "Durable A2A turn recovery and private content-engine access for Flusso.",
   register(api) {
+    api.registerTool({
+      name: "flusso_content_engine",
+      label: "Flusso Content Engine",
+      description: "Call Flusso's private Content Engineering engine. Use service_policy and quote during negotiation. Use create_job only after agreement, accept_job only for a matching OKX job_accepted event, then get_job, get_result, and get_export for fulfillment.",
+      parameters: engineToolParameters,
+      async execute(_id, params) {
+        return callEngine(params);
+      }
+    });
+
     api.on("before_agent_run", async (event, context) => {
       const runId = getRunId(event, context);
       const sessionKey = context.sessionKey;
@@ -120,6 +201,13 @@ export default definePluginEntry({
     });
 
     api.on("before_tool_call", async (event, context) => {
+      if (
+        event.toolName === "flusso_content_engine"
+        && String(context.agentId ?? "").toLowerCase() !== "flusso"
+      ) {
+        return { block: true, blockReason: "This private tool is restricted to the Flusso agent." };
+      }
+
       const state = findRun(event, context);
       if (state) await persistEvent(api, state, "tool_started");
     }, { priority: 100 });
