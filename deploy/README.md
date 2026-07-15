@@ -96,6 +96,7 @@ It will:
 - install the systemd units
 - link the Flusso Content Engineering skill into the Agent skill directory
 - start the localhost-only content engine
+- start the one-minute recovery timer for interrupted generation jobs
 - run a read-only configuration smoke test
 
 It does not generate content or spend model credits.
@@ -147,7 +148,8 @@ Expected pricing output:
 {
   "floor": 30,
   "target": 100,
-  "openingOffer": 115
+  "openingOffer": 115,
+  "floorEnforced": true
 }
 ~~~
 
@@ -164,11 +166,26 @@ Check services and logs:
 ~~~bash
 sudo systemctl status flusso-engine.service
 sudo systemctl status flusso-a2a.service
+sudo systemctl status flusso-recovery.timer
 sudo journalctl -u flusso-engine.service -n 100 --no-pager
 sudo journalctl -u flusso-a2a.service -n 100 --no-pager
+sudo journalctl -u flusso-recovery.service -n 100 --no-pager
 ~~~
 
-## 5. Deploy later GitHub updates
+## 5. Recovery behavior
+
+Accepted jobs run with a renewable database lease. A failed generation attempt is retried after 60 seconds, then 120 seconds, up to three total attempts. The recovery timer also reclaims work left in **accepted** or stale **running** state after an engine restart.
+
+These defaults can be changed with **A2A_MAX_GENERATION_ATTEMPTS**, **A2A_JOB_LEASE_SECONDS**, and **A2A_RETRY_BASE_SECONDS**. After the final attempt, the job remains **failed** for operator review. OKX protocol or escrow command failures still follow the OKX pending-decision flow and are not blindly retried.
+
+Run a non-generating recovery sweep manually:
+
+~~~bash
+sudo systemctl start flusso-recovery.service
+sudo journalctl -u flusso-recovery.service -n 20 --no-pager
+~~~
+
+## 6. Deploy later GitHub updates
 
 Push reviewed changes to the current upstream branch, then run:
 
@@ -178,16 +195,17 @@ sudo bash /opt/flusso/deploy/update-vps.sh
 
 The updater refuses to run over local VPS changes, pulls only with fast-forward semantics, rebuilds, restarts the engine, and reruns the smoke test.
 
-## 6. Beta launch gate
+## 7. Beta launch gate
 
 Before listing activation:
 
 1. Verify the Agent can read the private service policy.
-2. Simulate an offer below 30 USDT and confirm it reduces scope or declines.
+2. Simulate 20 USDT twice and confirm round one counters at 30 USDT and round two declines.
 3. Simulate an accepted task at 30 USDT or more.
 4. Confirm generation does not start before the accepted event.
 5. Run one full accepted-job lifecycle with a test brief.
 6. Inspect the proof report and all three exports.
-7. Activate the marketplace listing only after the delivery passes review.
+7. Restart **flusso-engine.service** during a test generation and confirm the recovery timer resumes it without creating a second campaign record.
+8. Activate the marketplace listing only after the delivery passes review.
 
-The first five setup checks are non-billable. The full generation lifecycle calls the configured model and should be triggered deliberately.
+The first four setup checks are non-billable. The full generation lifecycle calls the configured model and should be triggered deliberately.

@@ -21,7 +21,7 @@ export async function generateVisualImage(
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) throw new Error("OPENAI_API_KEY is missing. Add it to .env.local and restart the server.");
 
-  const model = process.env.OPENAI_MODEL || "gpt-5.4-mini";
+  const model = process.env.OPENAI_MODEL || "gpt-5.6-luna";
   const imageModel = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";
   const client = new OpenAI({
     apiKey,

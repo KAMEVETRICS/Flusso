@@ -24,7 +24,15 @@ runuser -u "$APP_USER" -- git -C "$APP_DIR" pull --ff-only
 runuser -u "$APP_USER" -- npm --prefix "$APP_DIR" ci
 runuser -u "$APP_USER" -- npm --prefix "$APP_DIR" run build
 
+install -o root -g root -m 0644 \
+  "$APP_DIR/deploy/systemd/flusso-recovery.service" \
+  /etc/systemd/system/flusso-recovery.service
+install -o root -g root -m 0644 \
+  "$APP_DIR/deploy/systemd/flusso-recovery.timer" \
+  /etc/systemd/system/flusso-recovery.timer
+systemctl daemon-reload
 systemctl restart flusso-engine.service
+systemctl enable --now flusso-recovery.timer
 APP_DIR="$APP_DIR" ENV_FILE="$ENV_FILE" bash "$APP_DIR/deploy/smoke-test.sh"
 
 echo "Deployment updated successfully."

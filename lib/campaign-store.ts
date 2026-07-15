@@ -174,10 +174,9 @@ function buildStageQueries(
   });
 }
 
-export async function saveCampaign(pack: DeliveryPack) {
+export async function saveCampaign(pack: DeliveryPack, id: string = randomUUID()) {
   await ensureCampaignSchema();
   const sql = getDatabase();
-  const id = randomUUID();
   const briefJson = JSON.stringify(pack.brief);
   const packJson = JSON.stringify(pack);
   const campaignQuery = sql`
@@ -192,6 +191,13 @@ export async function saveCampaign(pack: DeliveryPack) {
       ${briefJson}::jsonb,
       ${packJson}::jsonb
     )
+    ON CONFLICT (id) DO UPDATE SET
+      brand = EXCLUDED.brand,
+      goal = EXCLUDED.goal,
+      provider = EXCLUDED.provider,
+      model = EXCLUDED.model,
+      brief = EXCLUDED.brief,
+      delivery_pack = EXCLUDED.delivery_pack
     RETURNING id, brand, goal, provider, model, created_at
   `;
 

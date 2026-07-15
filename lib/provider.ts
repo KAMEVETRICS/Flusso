@@ -626,7 +626,7 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
     if (apiKey.startsWith("sk-or-")) {
       throw new Error("An OpenRouter key was detected. Add a direct OpenAI API key to .env.local.");
     }
-    this.model = process.env.OPENAI_MODEL || "gpt-5.4-mini";
+    this.model = process.env.OPENAI_MODEL || "gpt-5.6-luna";
     this.client = new OpenAI({
       apiKey,
       timeout: Number(process.env.OPENAI_TIMEOUT_MS || 120000)

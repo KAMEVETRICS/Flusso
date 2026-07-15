@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import process from "node:process";
 import { z } from "zod";
 import { ensureCampaignSchema, getDatabase } from "./db";
 import {
@@ -51,6 +52,9 @@ export type A2AContentJob = {
   completedStages: GenerationStage[];
   campaignId: string | null;
   error: string | null;
+  attemptCount: number;
+  leaseExpiresAt: string | null;
+  nextRetryAt: string | null;
   createdAt: string;
   acceptedAt: string | null;
   startedAt: string | null;
@@ -69,6 +73,9 @@ type A2AJobRow = {
   completed_stages: unknown;
   campaign_id: string | null;
   error: string | null;
+  attempt_count: number;
+  lease_expires_at: string | Date | null;
+  next_retry_at: string | Date | null;
   created_at: string | Date;
   accepted_at: string | Date | null;
   started_at: string | Date | null;
@@ -77,6 +84,28 @@ type A2AJobRow = {
 };
 
 let schemaPromise: Promise<void> | null = null;
+
+function positiveInteger(name: string, fallback: number) {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(name + " must be a positive integer.");
+  }
+  return value;
+}
+
+export function getA2ARecoveryConfig() {
+  return {
+    maxAttempts: positiveInteger("A2A_MAX_GENERATION_ATTEMPTS", 3),
+    leaseSeconds: positiveInteger("A2A_JOB_LEASE_SECONDS", 900),
+    retryBaseSeconds: positiveInteger("A2A_RETRY_BASE_SECONDS", 60)
+  };
+}
+
+export function getA2ARetryDelaySeconds(attemptCount: number, baseSeconds: number) {
+  return Math.min(baseSeconds * (2 ** Math.max(attemptCount - 1, 0)), 900);
+}
 
 function parseJson<T>(value: unknown): T {
   return (typeof value === "string" ? JSON.parse(value) : value) as T;
@@ -98,6 +127,9 @@ function toJob(row: A2AJobRow): A2AContentJob {
     completedStages: z.array(GenerationStageSchema).parse(parseJson(row.completed_stages)),
     campaignId: row.campaign_id,
     error: row.error,
+    attemptCount: row.attempt_count,
+    leaseExpiresAt: optionalIso(row.lease_expires_at),
+    nextRetryAt: optionalIso(row.next_retry_at),
     createdAt: new Date(row.created_at).toISOString(),
     acceptedAt: optionalIso(row.accepted_at),
     startedAt: optionalIso(row.started_at),
@@ -122,12 +154,27 @@ async function ensureA2AJobSchema() {
         completed_stages jsonb NOT NULL DEFAULT '[]'::jsonb,
         campaign_id text NULL REFERENCES campaign_runs(id) ON DELETE SET NULL,
         error text NULL,
+        attempt_count integer NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+        lease_expires_at timestamptz NULL,
+        next_retry_at timestamptz NULL,
         created_at timestamptz NOT NULL DEFAULT now(),
         accepted_at timestamptz NULL,
         started_at timestamptz NULL,
         completed_at timestamptz NULL,
         updated_at timestamptz NOT NULL DEFAULT now()
       )
+    `;
+    await sql`
+      ALTER TABLE a2a_content_jobs
+      ADD COLUMN IF NOT EXISTS attempt_count integer NOT NULL DEFAULT 0
+    `;
+    await sql`
+      ALTER TABLE a2a_content_jobs
+      ADD COLUMN IF NOT EXISTS lease_expires_at timestamptz NULL
+    `;
+    await sql`
+      ALTER TABLE a2a_content_jobs
+      ADD COLUMN IF NOT EXISTS next_retry_at timestamptz NULL
     `;
     await sql`
       CREATE INDEX IF NOT EXISTS a2a_content_jobs_status_idx
@@ -186,6 +233,54 @@ export async function getA2AJobByOkxId(okxJobId: string) {
   return rows[0] ? toJob(rows[0]) : null;
 }
 
+async function releaseExpiredA2ALeases(
+  sql: ReturnType<typeof getDatabase>,
+  maxAttempts: number
+) {
+  await sql`
+    UPDATE a2a_content_jobs
+    SET
+      status = CASE WHEN attempt_count >= ${maxAttempts} THEN 'failed' ELSE 'accepted' END,
+      error = COALESCE(error, 'Generation lease expired and was recovered.'),
+      lease_expires_at = NULL,
+      next_retry_at = CASE WHEN attempt_count >= ${maxAttempts} THEN NULL ELSE now() END,
+      completed_at = CASE WHEN attempt_count >= ${maxAttempts} THEN now() ELSE NULL END,
+      updated_at = now()
+    WHERE status = 'running'
+      AND (lease_expires_at IS NULL OR lease_expires_at <= now())
+  `;
+
+  await sql`
+    UPDATE a2a_content_jobs
+    SET
+      status = 'failed',
+      error = COALESCE(error, 'Generation attempts exhausted.'),
+      next_retry_at = NULL,
+      completed_at = now(),
+      updated_at = now()
+    WHERE status = 'accepted' AND attempt_count >= ${maxAttempts}
+  `;
+}
+
+export async function findRecoverableA2AJobIds(limit = 5) {
+  await ensureA2AJobSchema();
+  const sql = getDatabase();
+  const { maxAttempts } = getA2ARecoveryConfig();
+  const safeLimit = Math.max(1, Math.min(limit, 20));
+  await releaseExpiredA2ALeases(sql, maxAttempts);
+
+  const rows = await sql`
+    SELECT id
+    FROM a2a_content_jobs
+    WHERE status = 'accepted'
+      AND attempt_count < ${maxAttempts}
+      AND (next_retry_at IS NULL OR next_retry_at <= now())
+    ORDER BY COALESCE(next_retry_at, accepted_at, created_at) ASC
+    LIMIT ${safeLimit}
+  ` as { id: string }[];
+  return rows.map((row) => row.id);
+}
+
 export async function acceptA2AJob(id: string, okxJobId: string) {
   await ensureA2AJobSchema();
   const sql = getDatabase();
@@ -195,6 +290,7 @@ export async function acceptA2AJob(id: string, okxJobId: string) {
       status = 'accepted',
       accepted_at = COALESCE(accepted_at, now()),
       error = NULL,
+      next_retry_at = NULL,
       updated_at = now()
     WHERE id = ${id}
       AND okx_job_id = ${okxJobId}
@@ -209,10 +305,24 @@ export async function acceptA2AJob(id: string, okxJobId: string) {
 export async function claimAcceptedA2AJob(id: string) {
   await ensureA2AJobSchema();
   const sql = getDatabase();
+  const { leaseSeconds, maxAttempts } = getA2ARecoveryConfig();
   const rows = await sql`
     UPDATE a2a_content_jobs
-    SET status = 'running', started_at = now(), updated_at = now()
-    WHERE id = ${id} AND status = 'accepted'
+    SET
+      status = 'running',
+      attempt_count = attempt_count + 1,
+      lease_expires_at = now() + (${leaseSeconds} * interval '1 second'),
+      next_retry_at = NULL,
+      started_at = now(),
+      completed_at = NULL,
+      current_stage = NULL,
+      completed_stages = '[]'::jsonb,
+      error = NULL,
+      updated_at = now()
+    WHERE id = ${id}
+      AND status = 'accepted'
+      AND attempt_count < ${maxAttempts}
+      AND (next_retry_at IS NULL OR next_retry_at <= now())
     RETURNING *
   ` as A2AJobRow[];
   return rows[0] ? toJob(rows[0]) : null;
@@ -221,12 +331,14 @@ export async function claimAcceptedA2AJob(id: string) {
 export async function recordA2AJobStage(id: string, stage: GenerationStage) {
   await ensureA2AJobSchema();
   const sql = getDatabase();
+  const { leaseSeconds } = getA2ARecoveryConfig();
   const stageJson = JSON.stringify([stage]);
   await sql`
     UPDATE a2a_content_jobs
     SET
       current_stage = ${stage.stage},
       completed_stages = completed_stages || ${stageJson}::jsonb,
+      lease_expires_at = now() + (${leaseSeconds} * interval '1 second'),
       updated_at = now()
     WHERE id = ${id} AND status = 'running'
   `;
@@ -241,23 +353,50 @@ export async function completeA2AJob(id: string, campaignId: string) {
       status = 'completed',
       campaign_id = ${campaignId},
       current_stage = NULL,
+      lease_expires_at = NULL,
+      next_retry_at = NULL,
       completed_at = now(),
       updated_at = now()
     WHERE id = ${id} AND status = 'running'
   `;
 }
 
-export async function failA2AJob(id: string, message: string) {
+export async function deferOrFailA2AJob(
+  id: string,
+  message: string,
+  attemptCount: number
+) {
   await ensureA2AJobSchema();
   const sql = getDatabase();
+  const { maxAttempts, retryBaseSeconds } = getA2ARecoveryConfig();
+  const error = message.slice(0, 4000);
+
+  if (attemptCount < maxAttempts) {
+    const retryDelay = getA2ARetryDelaySeconds(attemptCount, retryBaseSeconds);
+    await sql`
+      UPDATE a2a_content_jobs
+      SET
+        status = 'accepted',
+        error = ${error},
+        current_stage = NULL,
+        lease_expires_at = NULL,
+        next_retry_at = now() + (${retryDelay} * interval '1 second'),
+        updated_at = now()
+      WHERE id = ${id} AND status = 'running'
+    `;
+    return;
+  }
+
   await sql`
     UPDATE a2a_content_jobs
     SET
       status = 'failed',
-      error = ${message.slice(0, 4000)},
+      error = ${error},
       current_stage = NULL,
+      lease_expires_at = NULL,
+      next_retry_at = NULL,
       completed_at = now(),
       updated_at = now()
-    WHERE id = ${id} AND status IN ('accepted', 'running')
+    WHERE id = ${id} AND status = 'running'
   `;
 }

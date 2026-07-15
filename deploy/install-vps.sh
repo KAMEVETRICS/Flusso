@@ -74,6 +74,8 @@ runuser -u "$APP_USER" -- npm --prefix "$APP_DIR" run build
 
 install -o root -g root -m 0644   "$APP_DIR/deploy/systemd/flusso-engine.service"   /etc/systemd/system/flusso-engine.service
 install -o root -g root -m 0644   "$APP_DIR/deploy/systemd/flusso-a2a.service"   /etc/systemd/system/flusso-a2a.service
+install -o root -g root -m 0644   "$APP_DIR/deploy/systemd/flusso-recovery.service"   /etc/systemd/system/flusso-recovery.service
+install -o root -g root -m 0644   "$APP_DIR/deploy/systemd/flusso-recovery.timer"   /etc/systemd/system/flusso-recovery.timer
 
 install -d -o "$APP_USER" -g "$APP_GROUP" -m 0750 "$APP_HOME/.agents/skills"
 ln -sfn   "$APP_DIR/agent-skills/flusso-content-engineering"   "$APP_HOME/.agents/skills/flusso-content-engineering"
@@ -83,6 +85,7 @@ chmod 0755   "$APP_DIR/deploy/install-vps.sh"   "$APP_DIR/deploy/update-vps.sh" 
 
 systemctl daemon-reload
 systemctl enable --now flusso-engine.service
+systemctl enable --now flusso-recovery.timer
 
 APP_DIR="$APP_DIR" ENV_FILE="$ENV_FILE" bash "$APP_DIR/deploy/smoke-test.sh"
 
