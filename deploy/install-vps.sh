@@ -81,12 +81,13 @@ install -d -o "$APP_USER" -g "$APP_GROUP" -m 0750 "$APP_HOME/.agents/skills"
 ln -sfn   "$APP_DIR/agent-skills/flusso-content-engineering"   "$APP_HOME/.agents/skills/flusso-content-engineering"
 chown -h "$APP_USER:$APP_GROUP" "$APP_HOME/.agents/skills/flusso-content-engineering"
 
-chmod 0755   "$APP_DIR/deploy/install-vps.sh"   "$APP_DIR/deploy/update-vps.sh"   "$APP_DIR/deploy/smoke-test.sh"
+chmod 0755   "$APP_DIR/deploy/install-vps.sh"   "$APP_DIR/deploy/update-vps.sh"   "$APP_DIR/deploy/smoke-test.sh"   "$APP_DIR/deploy/configure-openclaw.sh"
 
 systemctl daemon-reload
 systemctl enable --now flusso-engine.service
 systemctl enable --now flusso-recovery.timer
 
+APP_DIR="$APP_DIR" APP_USER="$APP_USER" APP_HOME="$APP_HOME" bash "$APP_DIR/deploy/configure-openclaw.sh"
 APP_DIR="$APP_DIR" ENV_FILE="$ENV_FILE" bash "$APP_DIR/deploy/smoke-test.sh"
 
 echo "Content engine is running on http://127.0.0.1:3107."

@@ -33,6 +33,7 @@ install -o root -g root -m 0644 \
 systemctl daemon-reload
 systemctl restart flusso-engine.service
 systemctl enable --now flusso-recovery.timer
+APP_DIR="$APP_DIR" APP_USER="$APP_USER" bash "$APP_DIR/deploy/configure-openclaw.sh"
 APP_DIR="$APP_DIR" ENV_FILE="$ENV_FILE" bash "$APP_DIR/deploy/smoke-test.sh"
 
 echo "Deployment updated successfully."

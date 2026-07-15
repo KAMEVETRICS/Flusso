@@ -96,7 +96,7 @@ It will:
 - install the systemd units
 - link the Flusso Content Engineering skill into the Agent skill directory
 - start the localhost-only content engine
-- start the one-minute recovery timer for interrupted generation jobs
+- start the one-minute recovery timer for interrupted generation jobs and safely replayable A2A turns
 - run a read-only configuration smoke test
 
 It does not generate content or spend model credits.
@@ -126,13 +126,20 @@ exit
 
 Every JSON result must report a ready or successful state before continuing. Complete Agentic Wallet login and A2A ASP registration through the Agent conversation.
 
-After runtime setup and registration succeed, enable boot startup for the communication daemon:
+After OpenClaw runtime setup succeeds, install the Flusso guard and restart the user gateway:
+
+~~~bash
+sudo bash /opt/flusso/deploy/configure-openclaw.sh
+sudo -iu flusso openclaw plugins inspect flusso-a2a-guard --runtime --json
+~~~
+
+Then enable boot startup for the communication daemon:
 
 ~~~bash
 sudo systemctl enable --now flusso-a2a.service
 ~~~
 
-The selected OpenClaw, Hermes, or other Agent runtime must also use its official always-on service or gateway configuration. This repository does not invent a wrapper around that runtime.
+OpenClaw still runs through its official user gateway. The Flusso plugin only adds durable turn tracking, bounded binding recovery, and final outbound pricing enforcement.
 
 ## 4. Verify production
 
@@ -176,7 +183,9 @@ sudo journalctl -u flusso-recovery.service -n 100 --no-pager
 
 Accepted jobs run with a renewable database lease. A failed generation attempt is retried after 60 seconds, then 120 seconds, up to three total attempts. The recovery timer also reclaims work left in **accepted** or stale **running** state after an engine restart.
 
-These defaults can be changed with **A2A_MAX_GENERATION_ATTEMPTS**, **A2A_JOB_LEASE_SECONDS**, and **A2A_RETRY_BASE_SECONDS**. After the final attempt, the job remains **failed** for operator review. OKX protocol or escrow command failures still follow the OKX pending-decision flow and are not blindly retried.
+Inbound A2A turns are persisted before the model starts. If OpenClaw reports the exact **Codex binding generation was retired** startup failure before any model or tool call, the timer resets that session and replays the turn with a stable idempotency key. It retries at most twice. Failures after model or tool execution are recorded but never automatically replayed, preventing duplicate protocol or payment side effects.
+
+Generation defaults use **A2A_MAX_GENERATION_ATTEMPTS**, **A2A_JOB_LEASE_SECONDS**, and **A2A_RETRY_BASE_SECONDS**. Conversation recovery uses **A2A_MAX_CONVERSATION_RECOVERY_ATTEMPTS** and **A2A_CONVERSATION_RETRY_BASE_SECONDS**. After the final attempt, the record remains **failed** and the reason is written to the recovery journal. OKX protocol or escrow command failures still follow the OKX pending-decision flow and are not blindly retried.
 
 Run a non-generating recovery sweep manually:
 

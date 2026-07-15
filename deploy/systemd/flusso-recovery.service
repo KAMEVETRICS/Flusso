@@ -1,5 +1,5 @@
 [Unit]
-Description=Recover interrupted Flusso generation jobs
+Description=Recover interrupted Flusso jobs and A2A conversations
 After=network-online.target flusso-engine.service
 Requires=flusso-engine.service
 
@@ -11,8 +11,9 @@ WorkingDirectory=/opt/flusso
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 EnvironmentFile=/etc/flusso/flusso.env
 ExecStart=/usr/bin/env node /opt/flusso/scripts/recover-a2a-jobs.mjs
+ExecStart=/usr/bin/env node /opt/flusso/scripts/recover-a2a-conversations.mjs
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
-ProtectHome=true
+ProtectHome=read-only
 UMask=0077
