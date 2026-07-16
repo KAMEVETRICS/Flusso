@@ -4,6 +4,7 @@ import process from "node:process";
 import { URL } from "node:url";
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import {
+  canUseFlussoPrivateTool,
   findSubfloorOffer,
   floorFallback,
   isFlussoA2ATurn,
@@ -203,7 +204,10 @@ export default definePluginEntry({
     api.on("before_tool_call", async (event, context) => {
       if (
         event.toolName === "flusso_content_engine"
-        && String(context.agentId ?? "").toLowerCase() !== "flusso"
+        && !canUseFlussoPrivateTool({
+          agentId: context.agentId,
+          sessionKey: context.sessionKey
+        })
       ) {
         return { block: true, blockReason: "This private tool is restricted to the Flusso agent." };
       }

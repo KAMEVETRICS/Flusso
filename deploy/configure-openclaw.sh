@@ -31,31 +31,34 @@ run_openclaw config set "plugins.entries.$PLUGIN_ID.hooks.allowConversationAcces
 run_openclaw config set "plugins.entries.$PLUGIN_ID.hooks.allowPromptInjection" true --strict-json
 
 agents_json="$(run_openclaw config get agents.list --json)"
-agent_index="$(node -e '
+for runtime_agent in main flusso; do
+  agent_index="$(node -e '
 const agents = JSON.parse(process.argv[1]);
-const index = agents.findIndex((agent) => agent?.id === "flusso");
+const index = agents.findIndex((agent) => agent?.id === process.argv[2]);
 if (index < 0) process.exit(1);
 process.stdout.write(String(index));
-' "$agents_json")" || {
-  echo "The flusso agent is missing from OpenClaw config." >&2
-  exit 1
-}
+' "$agents_json" "$runtime_agent")" || {
+    echo "The $runtime_agent agent is missing from OpenClaw config." >&2
+    exit 1
+  }
 
-allow_path="agents.list[$agent_index].tools.allow"
-if current_tools="$(run_openclaw config get "$allow_path" --json 2>/dev/null)"; then
-  tool_path="$allow_path"
-else
-  tool_path="agents.list[$agent_index].tools.alsoAllow"
-  current_tools="$(run_openclaw config get "$tool_path" --json 2>/dev/null || printf '[]')"
-fi
+  allow_path="agents.list[$agent_index].tools.allow"
+  if current_tools="$(run_openclaw config get "$allow_path" --json 2>/dev/null)"; then
+    tool_path="$allow_path"
+  else
+    tool_path="agents.list[$agent_index].tools.alsoAllow"
+    current_tools="$(run_openclaw config get "$tool_path" --json 2>/dev/null || printf '[]')"
+  fi
 
-allowed_tools="$(node -e '
+  allowed_tools="$(node -e '
 const tools = JSON.parse(process.argv[1]);
 if (!Array.isArray(tools)) throw new Error("Agent tool policy must be an array.");
 if (!tools.includes(process.argv[2])) tools.push(process.argv[2]);
 process.stdout.write(JSON.stringify(tools));
 ' "$current_tools" "$TOOL_ID")"
-run_openclaw config set "$tool_path" "$allowed_tools" --strict-json
+  run_openclaw config set "$tool_path" "$allowed_tools" --strict-json
+  run_openclaw config set "agents.list[$agent_index].tools.exec.mode" '"auto"' --strict-json
+done
 run_openclaw config validate
 
 drop_in_dir="$APP_HOME/.config/systemd/user/openclaw-gateway.service.d"

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  canUseFlussoPrivateTool,
   findSubfloorOffer,
   floorFallback,
   isFlussoA2ATurn,
@@ -39,4 +40,16 @@ test("recognizes OKX group sessions and explicit dry runs", () => {
   assert.equal(isFlussoA2ATurn({ agentId: "flusso", sessionKey: "agent:flusso:group:123", prompt: "hello" }), true);
   assert.equal(isFlussoA2ATurn({ agentId: "flusso", sessionKey: "tui:1", prompt: "Use the Flusso Content Engineering capability." }), true);
   assert.equal(isFlussoA2ATurn({ agentId: "crestodian", sessionKey: "agent:crestodian:group:123", prompt: "hello" }), false);
+});
+test("restricts the private engine to Flusso and the main A2A runtime", () => {
+  assert.equal(canUseFlussoPrivateTool({ agentId: "flusso", sessionKey: "tui:1" }), true);
+  assert.equal(canUseFlussoPrivateTool({
+    agentId: "main",
+    sessionKey: "agent:main:okx-a2a:group:okx-xmtp:my=5782&to=6245&job=123"
+  }), true);
+  assert.equal(canUseFlussoPrivateTool({ agentId: "main", sessionKey: "agent:main:main" }), false);
+  assert.equal(canUseFlussoPrivateTool({
+    agentId: "crestodian",
+    sessionKey: "agent:crestodian:okx-a2a:group:123"
+  }), false);
 });
