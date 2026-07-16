@@ -9,10 +9,10 @@ User=flusso
 Group=flusso
 WorkingDirectory=/opt/flusso
 Environment=HOME=/home/flusso
-Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PATH=/home/flusso/.npm-global/bin:/home/flusso/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 EnvironmentFile=/etc/flusso/flusso.env
 ExecStart=/usr/bin/env node /opt/flusso/scripts/ensure-a2a-runtime.mjs
-TimeoutStartSec=240
+TimeoutStartSec=600
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full

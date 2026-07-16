@@ -20,7 +20,14 @@ if [[ -n "$(runuser -u "$APP_USER" -- git -C "$APP_DIR" status --porcelain)" ]];
   exit 1
 fi
 
+previous_revision="$(runuser -u "$APP_USER" -- git -C "$APP_DIR" rev-parse HEAD)"
 runuser -u "$APP_USER" -- git -C "$APP_DIR" pull --ff-only
+current_revision="$(runuser -u "$APP_USER" -- git -C "$APP_DIR" rev-parse HEAD)"
+
+if [[ "$previous_revision" != "$current_revision" && "${FLUSSO_UPDATE_REEXEC:-0}" != "1" ]]; then
+  exec env FLUSSO_UPDATE_REEXEC=1 bash "$APP_DIR/deploy/update-vps.sh"
+fi
+
 runuser -u "$APP_USER" -- npm --prefix "$APP_DIR" ci
 runuser -u "$APP_USER" -- npm --prefix "$APP_DIR" run build
 

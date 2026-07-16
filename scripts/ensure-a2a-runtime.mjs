@@ -49,6 +49,18 @@ function sleep(milliseconds) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 }
 
+function waitForSuccess(command, args, attempts = 12, delayMs = 5_000) {
+  let result;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    result = call(command, args, 30_000);
+    if (result.status === 0) return result;
+    if (attempt < attempts) sleep(delayMs);
+  }
+
+  return result;
+}
+
 configureUserEnvironment();
 
 let daemon = call("okx-a2a", ["daemon", "status"], 30_000);
@@ -65,11 +77,9 @@ let gateway = call(
 );
 if (gateway.status !== 0) {
   run("openclaw", ["gateway", "restart", "--wait", "30s"], "OpenClaw gateway restart", 90_000);
-  sleep(5_000);
-  gateway = call(
+  gateway = waitForSuccess(
     "openclaw",
-    ["gateway", "status", "--require-rpc", "--json"],
-    30_000
+    ["gateway", "status", "--require-rpc", "--json"]
   );
 }
 if (gateway.status !== 0) throw failure(gateway, "OpenClaw gateway status");
@@ -89,11 +99,10 @@ requireReadyResult(
 const active = requireActiveClient(
   runJson("okx-a2a", ["agent", "refresh", "--json"], "Final OKX agent refresh")
 );
-run(
+gateway = waitForSuccess(
   "openclaw",
-  ["gateway", "status", "--require-rpc", "--json"],
-  "Final OpenClaw gateway status",
-  30_000
+  ["gateway", "status", "--require-rpc", "--json"]
 );
+if (gateway.status !== 0) throw failure(gateway, "Final OpenClaw gateway status");
 
 console.log(JSON.stringify({ status: "ready", ...active }));

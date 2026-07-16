@@ -34,14 +34,33 @@ function run(command, args, label, timeout) {
   return result.stdout;
 }
 
+function sleep(milliseconds) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+}
+
+function waitForGateway(attempts = 12, delayMs = 5_000) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return run(
+        "openclaw",
+        ["gateway", "status", "--require-rpc", "--json"],
+        "OpenClaw gateway status",
+        30_000
+      );
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) sleep(delayMs);
+    }
+  }
+
+  throw lastError;
+}
+
 configureUserEnvironment();
 
-run(
-  "openclaw",
-  ["gateway", "status", "--require-rpc", "--json"],
-  "OpenClaw gateway status",
-  30_000
-);
+waitForGateway();
 
 const response = parseCliJson(
   run(
