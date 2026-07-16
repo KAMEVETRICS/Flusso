@@ -137,9 +137,11 @@ Then enable boot startup for the communication daemon:
 
 ~~~bash
 sudo systemctl enable --now flusso-a2a.service
+sudo systemctl enable --now flusso-a2a-health.timer
+sudo systemctl start flusso-a2a-health.service
 ~~~
 
-OpenClaw still runs through its official user gateway. The Flusso plugin only adds durable turn tracking, bounded binding recovery, and final outbound pricing enforcement.
+The health timer runs the official runtime switch, agent refresh, and final setup checks every five minutes. It requires at least one registered communication identity and one active client, and it verifies that the OpenClaw gateway accepts authenticated RPC calls. OpenClaw still runs through its official user gateway. The Flusso plugin only adds durable turn tracking, bounded binding recovery, and final outbound pricing enforcement.
 
 ## 4. Verify production
 
@@ -173,11 +175,28 @@ Check services and logs:
 ~~~bash
 sudo systemctl status flusso-engine.service
 sudo systemctl status flusso-a2a.service
+sudo systemctl status flusso-a2a-health.timer
+sudo systemctl status flusso-a2a-health.service
 sudo systemctl status flusso-recovery.timer
 sudo journalctl -u flusso-engine.service -n 100 --no-pager
 sudo journalctl -u flusso-a2a.service -n 100 --no-pager
+sudo journalctl -u flusso-a2a-health.service -n 100 --no-pager
 sudo journalctl -u flusso-recovery.service -n 100 --no-pager
 ~~~
+
+Run one non-content response probe before marketplace review. This makes a small model call through the configured OpenClaw gateway and requires an exact response token:
+
+~~~bash
+sudo -iu flusso node /opt/flusso/scripts/probe-a2a-agent.mjs
+~~~
+
+Expected output:
+
+~~~json
+{"status":"ready","agent":"flusso","response":"FLUSSO_A2A_READY"}
+~~~
+
+This local probe proves the gateway and model can answer unattended. It does not replace OKX's required marketplace test: use a separate OKX.AI User identity to request Agent **#5782**, confirm Flusso replies, and only then resubmit the listing.
 
 ## 5. Recovery behavior
 

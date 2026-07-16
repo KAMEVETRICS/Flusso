@@ -40,6 +40,7 @@ fi
 if ! id "$APP_USER" >/dev/null 2>&1; then
   useradd --system --create-home --home-dir "$APP_HOME"     --shell /bin/bash --gid "$APP_GROUP" "$APP_USER"
 fi
+loginctl enable-linger "$APP_USER"
 
 install -d -o root -g "$APP_GROUP" -m 0750 "$CONFIG_DIR"
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -74,6 +75,8 @@ runuser -u "$APP_USER" -- npm --prefix "$APP_DIR" run build
 
 install -o root -g root -m 0644   "$APP_DIR/deploy/systemd/flusso-engine.service"   /etc/systemd/system/flusso-engine.service
 install -o root -g root -m 0644   "$APP_DIR/deploy/systemd/flusso-a2a.service"   /etc/systemd/system/flusso-a2a.service
+install -o root -g root -m 0644   "$APP_DIR/deploy/systemd/flusso-a2a-health.service"   /etc/systemd/system/flusso-a2a-health.service
+install -o root -g root -m 0644   "$APP_DIR/deploy/systemd/flusso-a2a-health.timer"   /etc/systemd/system/flusso-a2a-health.timer
 install -o root -g root -m 0644   "$APP_DIR/deploy/systemd/flusso-recovery.service"   /etc/systemd/system/flusso-recovery.service
 install -o root -g root -m 0644   "$APP_DIR/deploy/systemd/flusso-recovery.timer"   /etc/systemd/system/flusso-recovery.timer
 

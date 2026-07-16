@@ -9,12 +9,16 @@ Type=oneshot
 User=flusso
 Group=flusso
 WorkingDirectory=/opt/flusso
+Environment=HOME=/home/flusso
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 EnvironmentFile=/etc/flusso/flusso.env
 ExecStart=/usr/bin/env okx-a2a daemon start
 ExecStartPost=/usr/bin/env okx-a2a daemon status
 ExecReload=/usr/bin/env okx-a2a daemon restart
 RemainAfterExit=yes
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=180
 NoNewPrivileges=true
 PrivateTmp=true
 UMask=0077

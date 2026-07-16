@@ -63,6 +63,8 @@ install -d -o "$APP_USER" -g "$APP_USER" -m 0750 "$drop_in_dir"
 printf '%s\n' \
   '[Service]' \
   'EnvironmentFile=/etc/flusso/flusso.env' \
+  'Restart=always' \
+  'RestartSec=5' \
   > "$drop_in_dir/flusso.conf"
 chown "$APP_USER:$APP_USER" "$drop_in_dir/flusso.conf"
 chmod 0640 "$drop_in_dir/flusso.conf"
