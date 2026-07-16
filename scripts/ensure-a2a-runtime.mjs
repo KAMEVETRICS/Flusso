@@ -14,10 +14,8 @@ function configureUserEnvironment() {
   if (typeof process.getuid !== "function") return;
 
   const runtimeDir = `/run/user/${process.getuid()}`;
-  if (!process.env.XDG_RUNTIME_DIR) process.env.XDG_RUNTIME_DIR = runtimeDir;
-  if (!process.env.DBUS_SESSION_BUS_ADDRESS) {
-    process.env.DBUS_SESSION_BUS_ADDRESS = `unix:path=${runtimeDir}/bus`;
-  }
+  process.env.XDG_RUNTIME_DIR = runtimeDir;
+  process.env.DBUS_SESSION_BUS_ADDRESS = `unix:path=${runtimeDir}/bus`;
 }
 
 function call(command, args, timeout = commandTimeoutMs) {
