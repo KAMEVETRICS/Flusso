@@ -11,6 +11,8 @@ Group=flusso
 WorkingDirectory=/opt/flusso
 Environment=HOME=/home/flusso
 Environment=PATH=/home/flusso/.npm-global/bin:/home/flusso/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus
 EnvironmentFile=/etc/flusso/flusso.env
 ExecStart=/usr/bin/env okx-a2a daemon start
 ExecStartPost=/usr/bin/env okx-a2a daemon status
