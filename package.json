@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --experimental-strip-types tests/a2a-quote.test.mjs && node tests/a2a-guard.test.mjs && node --experimental-strip-types tests/a2a-recovery-policy.test.mjs && node tests/a2a-runtime-readiness.test.mjs && node tests/openclaw-engine-tool.test.mjs",
+    "test": "node --experimental-strip-types tests/a2a-quote.test.mjs && node tests/a2a-guard.test.mjs && node --experimental-strip-types tests/a2a-recovery-policy.test.mjs && node tests/a2a-runtime-readiness.test.mjs && node tests/openclaw-engine-tool.test.mjs && node tests/openclaw-marketplace-tool.test.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },

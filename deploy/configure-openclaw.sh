@@ -6,7 +6,7 @@ APP_USER="${APP_USER:-flusso}"
 APP_HOME="${APP_HOME:-/home/flusso}"
 PLUGIN_ID="flusso-a2a-guard"
 PLUGIN_DIR="$APP_DIR/openclaw-plugins/$PLUGIN_ID"
-TOOL_ID="flusso_content_engine"
+TOOL_IDS_JSON='["flusso_content_engine","flusso_marketplace"]'
 
 if [[ "${EUID}" -ne 0 ]]; then
   echo "Run this OpenClaw configurator as root." >&2
@@ -53,9 +53,12 @@ process.stdout.write(String(index));
   allowed_tools="$(node -e '
 const tools = JSON.parse(process.argv[1]);
 if (!Array.isArray(tools)) throw new Error("Agent tool policy must be an array.");
-if (!tools.includes(process.argv[2])) tools.push(process.argv[2]);
+const requiredTools = JSON.parse(process.argv[2]);
+for (const tool of requiredTools) {
+  if (!tools.includes(tool)) tools.push(tool);
+}
 process.stdout.write(JSON.stringify(tools));
-' "$current_tools" "$TOOL_ID")"
+' "$current_tools" "$TOOL_IDS_JSON")"
   run_openclaw config set "$tool_path" "$allowed_tools" --strict-json
   run_openclaw config set "agents.list[$agent_index].tools.exec.mode" '"auto"' --strict-json
 done

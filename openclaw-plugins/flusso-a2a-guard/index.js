@@ -1,5 +1,7 @@
 /* global AbortSignal, fetch */
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
+import { promisify } from "node:util";
 import process from "node:process";
 import { URL } from "node:url";
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
@@ -11,10 +13,97 @@ import {
   parseNegotiationRound
 } from "../../lib/openclaw-a2a-guard.mjs";
 import { buildEngineRequest } from "../../lib/openclaw-engine-tool.mjs";
+import {
+  allowedMarketplaceActions,
+  buildMarketplaceCommand,
+  marketplaceSessionForContext
+} from "../../lib/openclaw-marketplace-tool.mjs";
 
 const pluginId = "flusso-a2a-guard";
 const runs = new Map();
 const latestRunBySession = new Map();
+const marketplacePlaybooks = new Map();
+const marketplaceWrites = new Map();
+const execFileAsync = promisify(execFile);
+const MARKETPLACE_TOOL_ID = "flusso_marketplace";
+const MARKETPLACE_PLAYBOOK_TTL_MS = 30 * 60 * 1_000;
+const ONCHAINOS_BIN = process.env.ONCHAINOS_BIN?.trim() || "/home/flusso/.local/bin/onchainos";
+const OKX_A2A_BIN = process.env.OKX_A2A_BIN?.trim() || "/home/flusso/.npm-global/bin/okx-a2a";
+
+function marketplaceProviderId() {
+  return process.env.FLUSSO_PROVIDER_AGENT_ID?.trim() || "5782";
+}
+
+function marketplaceSession(context) {
+  return marketplaceSessionForContext({
+    agentId: context.agentId,
+    sessionKey: context.sessionKey,
+    expectedProviderAgentId: marketplaceProviderId()
+  });
+}
+
+function marketplacePlaybookKey(sessionKey, jobId) {
+  return String(sessionKey) + ":" + jobId;
+}
+
+function marketplaceBinary(name) {
+  if (name === "onchainos") return ONCHAINOS_BIN;
+  if (name === "okx-a2a") return OKX_A2A_BIN;
+  throw new Error("Unsupported marketplace binary.");
+}
+
+async function runMarketplaceCommand(command) {
+  const home = process.env.HOME?.trim() || "/home/flusso";
+  try {
+    const result = await execFileAsync(marketplaceBinary(command.binary), command.args, {
+      cwd: home,
+      env: {
+        ...process.env,
+        HOME: home,
+        OKX_AGENT_TASK_HOME: process.env.OKX_AGENT_TASK_HOME?.trim() || home + "/.okx-agent-task",
+        PATH: [
+          home + "/.npm-global/bin",
+          home + "/.local/bin",
+          "/usr/local/bin",
+          "/usr/bin",
+          "/bin"
+        ].join(":")
+      },
+      encoding: "utf8",
+      maxBuffer: 1024 * 1024,
+      timeout: 120_000,
+      windowsHide: true
+    });
+    const output = [result.stdout, result.stderr]
+      .map((value) => String(value ?? "").trim())
+      .filter(Boolean)
+      .join("\n");
+    return output || "Marketplace action completed successfully.";
+  } catch (error) {
+    const detail = [error?.stderr, error?.stdout, error?.message]
+      .map((value) => String(value ?? "").trim())
+      .filter(Boolean)
+      .join("\n")
+      .slice(0, 12_000);
+    throw new Error("Marketplace action failed: " + (detail || "unknown error"));
+  }
+}
+
+function advanceMarketplacePlaybook(key, action, allowed) {
+  if (action === "asp_reject" && allowed.has("user_notify")) {
+    marketplacePlaybooks.set(key, { allowed: new Set(["user_notify"]), createdAt: Date.now() });
+    return;
+  }
+  if (action === "deliver" && allowed.has("peer_send")) {
+    marketplacePlaybooks.set(key, { allowed: new Set(["peer_send"]), createdAt: Date.now() });
+    return;
+  }
+  if (action === "dispute_raise" && allowed.has("dispute_confirm")) {
+    marketplacePlaybooks.set(key, { allowed: new Set(["dispute_confirm"]), createdAt: Date.now() });
+    return;
+  }
+  marketplacePlaybooks.delete(key);
+}
 
 function positiveNumber(name, fallback) {
   const value = Number(process.env[name]);
@@ -122,6 +211,35 @@ const engineToolParameters = {
   required: ["action"]
 };
 
+const marketplaceToolParameters = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    action: {
+      type: "string",
+      enum: [
+        "next_action",
+        "apply",
+        "asp_reject",
+        "deliver",
+        "agree_refund",
+        "claim_auto_complete",
+        "dispute_raise",
+        "dispute_confirm",
+        "user_notify",
+        "peer_send"
+      ]
+    },
+    jobId: { type: "string", description: "Marketplace job ID; it must match the active session." },
+    messageJson: { type: "string", description: "Exact system-event message object for next_action." },
+    tokenAmount: { type: "string", description: "Provider application price for apply." },
+    tokenSymbol: { type: "string", enum: ["USDT", "USDG"] },
+    reason: { type: "string", description: "Reason for a permitted rejection or dispute action." },
+    content: { type: "string", description: "Delivery, peer message, or user notification content." }
+  },
+  required: ["action"]
+};
+
 async function callEngine(params) {
   const baseUrl = process.env.CONTENT_ENGINE_URL?.trim();
   const apiKey = process.env.A2A_INTERNAL_API_KEY?.trim();
@@ -167,6 +285,62 @@ export default definePluginEntry({
   name: "Flusso A2A Guard",
   description: "Durable A2A turn recovery and private content-engine access for Flusso.",
   register(api) {
+    api.registerTool((toolContext) => {
+      const session = marketplaceSession(toolContext);
+      if (!session) return null;
+      const sessionKey = String(toolContext.sessionKey);
+
+      return {
+        name: MARKETPLACE_TOOL_ID,
+        label: "Flusso Marketplace",
+        description: "Use this native adapter for every marketplace lifecycle command. Call next_action first with the exact system-event message JSON, then execute only the action prescribed by the returned playbook. Never use shell execution for marketplace commands.",
+        parameters: marketplaceToolParameters,
+        async execute(_id, params) {
+          const floor = positiveNumber("A2A_PRICE_FLOOR_USDT", 30);
+          const command = buildMarketplaceCommand(params, session, floor);
+          const key = marketplacePlaybookKey(sessionKey, command.jobId);
+
+          if (command.action === "next_action") {
+            const output = await runMarketplaceCommand(command);
+            const allowed = allowedMarketplaceActions(output);
+            if (allowed.size === 0) {
+              throw new Error("The marketplace playbook did not expose a supported provider action.");
+            }
+            marketplacePlaybooks.set(key, { allowed, createdAt: Date.now(), event: command.event });
+            return {
+              content: [{ type: "text", text: output }],
+              details: { event: command.event, allowedActions: [...allowed] }
+            };
+          }
+
+          const playbook = marketplacePlaybooks.get(key);
+          if (!playbook || Date.now() - playbook.createdAt > MARKETPLACE_PLAYBOOK_TTL_MS) {
+            marketplacePlaybooks.delete(key);
+            throw new Error("Call next_action for this event before executing a marketplace write.");
+          }
+          if (!playbook.allowed.has(command.action)) {
+            throw new Error("The official marketplace playbook did not permit this action.");
+          }
+
+          const writeKey = JSON.stringify([sessionKey, command.action, command.jobId, command.args]);
+          if (marketplaceWrites.has(writeKey)) return marketplaceWrites.get(writeKey);
+
+          const output = await runMarketplaceCommand(command);
+          if (command.action === "apply" && !/txHash/i.test(output)) {
+            throw new Error("Marketplace apply returned without a transaction hash.");
+          }
+
+          const result = {
+            content: [{ type: "text", text: output }],
+            details: { action: command.action, jobId: command.jobId }
+          };
+          marketplaceWrites.set(writeKey, result);
+          advanceMarketplacePlaybook(key, command.action, playbook.allowed);
+          return result;
+        }
+      };
+    }, { name: MARKETPLACE_TOOL_ID });
+
     api.registerTool({
       name: "flusso_content_engine",
       label: "Flusso Content Engine",
@@ -176,6 +350,22 @@ export default definePluginEntry({
         return callEngine(params);
       }
     });
+
+    api.on("before_prompt_build", async (_event, context) => {
+      const session = marketplaceSession(context);
+      if (!session) return;
+
+      const floor = positiveNumber("A2A_PRICE_FLOOR_USDT", 30);
+      return {
+        prependSystemContext: [
+          "This is a Flusso marketplace provider session.",
+          "Use flusso_marketplace for every marketplace lifecycle command; never use exec or shell for onchainos or okx-a2a.",
+          "For a system event, call flusso_marketplace with action next_action and the exact message object as messageJson, then follow only the returned playbook.",
+          "Use flusso_content_engine for pricing and fulfillment, but do not generate work before job_accepted.",
+          "Flusso's hard application floor is " + floor + " USDT."
+        ].join("\n")
+      };
+    }, { priority: 200 });
 
     api.on("before_agent_run", async (event, context) => {
       const runId = getRunId(event, context);
@@ -202,6 +392,14 @@ export default definePluginEntry({
     });
 
     api.on("before_tool_call", async (event, context) => {
+      if (
+        event.toolName === MARKETPLACE_TOOL_ID
+        && !marketplaceSession(context)
+      ) {
+        return { block: true, blockReason: "The marketplace adapter is restricted to Flusso provider sessions." };
+      }
+
+
       if (
         event.toolName === "flusso_content_engine"
         && !canUseFlussoPrivateTool({
