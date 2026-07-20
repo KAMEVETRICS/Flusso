@@ -1,4 +1,4 @@
-import type { DeliveryPack } from "./schemas";
+import type { ContentAsset, DeliveryPack } from "./schemas";
 
 export type CampaignExportFormat = "strategy" | "calendar" | "content-pack";
 
@@ -34,6 +34,26 @@ function addBullets(lines: string[], values: string[], emptyLabel = "None record
 
 function markdownCell(value: string | number) {
   return cleanLine(String(value)).replace(/\|/g, "\\|");
+}
+
+export function sourceLinksForAsset(pack: DeliveryPack, asset: ContentAsset) {
+  const calendarItem = pack.calendar.find((item) => item.id === asset.calendarItemId);
+  if (!calendarItem) {
+    return [];
+  }
+
+  const sourcesById = new Map(pack.sources.map((source) => [source.id, source]));
+  return calendarItem.sourcePack.flatMap((sourceId) => {
+    const source = sourcesById.get(sourceId);
+    if (!source?.url) {
+      return [];
+    }
+    return [{
+      id: source.id,
+      title: cleanLine(source.title),
+      url: source.url
+    }];
+  });
 }
 
 export function buildStrategyMarkdown(pack: DeliveryPack) {
@@ -177,6 +197,13 @@ export function buildStrategyMarkdown(pack: DeliveryPack) {
       lines.push("Tags: " + asset.article.tags.map(cleanLine).join(", "));
     } else {
       lines.push(asset.copy);
+    }
+    const sourceLinks = sourceLinksForAsset(pack, asset);
+    if (sourceLinks.length) {
+      lines.push("", "#### Sources", "");
+      sourceLinks.forEach((source) => {
+        lines.push("- [" + source.title + "](" + source.url + ")");
+      });
     }
     lines.push("");
   });

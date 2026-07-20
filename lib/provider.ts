@@ -33,6 +33,7 @@ import {
   inspectEditorialAssets
 } from "./editorial-policy";
 import { fetchSourceDocument, isLikelyUrl, noteSource } from "./source-ingestion";
+import { campaignProductionScope } from "./campaign-scope";
 
 const GeneratedClaimSchema = z.object({
   id: z.string(),
@@ -67,17 +68,17 @@ const GeneratedAssetSchema = ContentAssetSchema.omit({ linkedClaims: true }).ext
 
 const ExecutionStageSchema = z.object({
   calendar: z.array(CalendarItemSchema).min(7).max(30),
-  assets: z.array(GeneratedAssetSchema).min(5).max(12)
+  assets: z.array(GeneratedAssetSchema).min(5).max(30)
 });
 
 const EditorialStageSchema = z.object({
-  assets: z.array(GeneratedAssetSchema).min(5).max(12),
+  assets: z.array(GeneratedAssetSchema).min(5).max(30),
   visualBriefs: z.array(VisualBriefSchema).min(2).max(4),
   editorialReport: EditorialReportSchema
 });
 
 const EditorialAssetRepairSchema = z.object({
-  assetRepairs: z.array(GeneratedAssetSchema).min(1).max(4)
+  assetRepairs: z.array(GeneratedAssetSchema).min(1).max(30)
 });
 
 const EditorialArticleRepairSchema = z.object({
@@ -103,6 +104,15 @@ const ClaimRepairPatchSchema = z.object({
     threadPosts: z.array(z.string()),
     article: ArticleContentSchema.nullable(),
     linkedClaims: z.array(z.string())
+  })),
+  visualBriefUpdates: z.array(z.object({
+    visualBriefId: z.string(),
+    purpose: z.string(),
+    keyMessage: z.string(),
+    dataPoints: z.array(z.string()),
+    prompt: z.string(),
+    altText: z.string(),
+    sourceIds: z.array(z.string())
   })),
   claimResolutions: z.array(z.object({
     claimId: z.string(),
@@ -721,17 +731,31 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
     const impactedAssets = pack.assets.filter((asset) =>
       asset.linkedClaims.some((claimId) => targetClaimIds.has(claimId))
     );
+    const targetContentIds = new Map(
+      targetClaims.map((claim) => [
+        claim.id,
+        new Set(claim.contentUsedIn.split(",").map((id) => id.trim()).filter(Boolean))
+      ])
+    );
+    const impactedVisualBriefs = pack.visualBriefs.filter((visual) =>
+      targetClaims.some((claim) => targetContentIds.get(claim.id)?.has(visual.id))
+    );
     const linkedTargetClaimIds = new Set(
       impactedAssets.flatMap((asset) =>
         asset.linkedClaims.filter((claimId) => targetClaimIds.has(claimId))
       )
     );
+    targetClaims.forEach((claim) => {
+      if (impactedVisualBriefs.some((visual) => targetContentIds.get(claim.id)?.has(visual.id))) {
+        linkedTargetClaimIds.add(claim.id);
+      }
+    });
     const unlinkedTargetClaimIds = new Set(
       targetClaims
         .filter((claim) => !linkedTargetClaimIds.has(claim.id))
         .map((claim) => claim.id)
     );
-    if (!impactedAssets.length) {
+    if (!impactedAssets.length && !impactedVisualBriefs.length) {
       const repairedAt = new Date().toISOString();
       const claims = pack.proofReport.claims.map((claim) =>
         unlinkedTargetClaimIds.has(claim.id)
@@ -767,10 +791,12 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
           "You repair unsupported or conflicting claims in publish-ready content.",
           "Use only the supplied fetched evidence sources. Never invent a source, metric, capability, partnership, or guarantee.",
           "Return an asset update for every supplied asset affected by a target claim.",
+          "Return a visual brief update for every supplied visual affected by a target claim.",
           "For every asset update, return its complete visible body: copy, threadPosts, and article. Preserve unused structures as [] or null.",
+          "For every visual brief update, rewrite purpose, keyMessage, dataPoints, prompt, and altText so the unsupported assertion is removed or explicitly framed as an independent interpretation. Preserve only supplied source IDs.",
           "For action removed, rewrite every visible body field so the factual assertion is gone and remove that claimId from linkedClaims.",
-          "For action replaced-with-supported, use a conservative replacement backed by an exact supplied sourceId in every affected body field and keep that claimId in linkedClaims.",
-          "Use only supplied asset IDs, claim IDs, and source IDs.",
+          "For action replaced-with-supported, use a conservative replacement backed by an exact supplied sourceId in every affected asset and visual field and keep that claimId in linkedClaims.",
+          "Use only supplied asset IDs, visual brief IDs, claim IDs, and source IDs.",
           "Preserve the asset's voice, CTA, intent, format, and platform fit while making the smallest necessary rewrite."
         ].join("\n"),
         input: JSON.stringify({
@@ -778,6 +804,7 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
           restrictions: pack.brief.restrictions,
           targetClaims,
           impactedAssets,
+          impactedVisualBriefs,
           evidenceSources: validSources
         }),
         text: {
@@ -805,12 +832,31 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
             }
           ])
       );
+      const visualBriefIds = new Set(pack.visualBriefs.map((visual) => visual.id));
+      const updateByVisualBriefId = new Map(
+        patch.visualBriefUpdates
+          .filter((update) => visualBriefIds.has(update.visualBriefId))
+          .map((update) => [
+            update.visualBriefId,
+            {
+              ...update,
+              sourceIds: update.sourceIds.filter((sourceId) => sourceById.has(sourceId))
+            }
+          ])
+      );
       const candidateResolutions = new Map<string, (typeof patch.claimResolutions)[number]>();
 
       for (const resolution of patch.claimResolutions) {
         if (!targetClaimIds.has(resolution.claimId)) continue;
         const affectedAssets = pack.assets.filter((asset) => asset.linkedClaims.includes(resolution.claimId));
-        if (!affectedAssets.length) continue;
+        const affectedVisuals = pack.visualBriefs.filter((visual) =>
+          targetContentIds.get(resolution.claimId)?.has(visual.id)
+        );
+        if (!affectedAssets.length && !affectedVisuals.length) continue;
+        const allVisualsUpdated = affectedVisuals.every((visual) =>
+          updateByVisualBriefId.has(visual.id)
+        );
+        if (!allVisualsUpdated) continue;
 
         if (resolution.action === "removed") {
           const allAssetsUpdated = affectedAssets.every((asset) => updateByAssetId.has(asset.id));
@@ -828,7 +874,16 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
         const suppliedUpdatesRetainClaim = affectedAssets
           .filter((asset) => updateByAssetId.has(asset.id))
           .every((asset) => updateByAssetId.get(asset.id)?.linkedClaims.includes(resolution.claimId));
-        if (source && replacementText && resolution.confidence !== null && suppliedUpdatesRetainClaim) {
+        const suppliedVisualsCiteSource = affectedVisuals.every((visual) =>
+          updateByVisualBriefId.get(visual.id)?.sourceIds.includes(resolution.sourceId as string)
+        );
+        if (
+          source &&
+          replacementText &&
+          resolution.confidence !== null &&
+          suppliedUpdatesRetainClaim &&
+          suppliedVisualsCiteSource
+        ) {
           candidateResolutions.set(resolution.claimId, resolution);
         }
       }
@@ -902,12 +957,32 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
           linkedClaims: Array.from(linkedClaims)
         };
       });
+      const visualBriefs = pack.visualBriefs.map((visual) => {
+        const update = updateByVisualBriefId.get(visual.id);
+        const hasSuccessfulClaim = targetClaims.some(
+          (claim) =>
+            successfulResolutions.has(claim.id) &&
+            targetContentIds.get(claim.id)?.has(visual.id)
+        );
+        if (!update || !hasSuccessfulClaim) return visual;
+
+        return {
+          ...visual,
+          purpose: update.purpose.trim(),
+          keyMessage: update.keyMessage.trim(),
+          dataPoints: update.dataPoints,
+          prompt: update.prompt.trim(),
+          altText: update.altText.trim(),
+          sourceIds: update.sourceIds
+        };
+      });
       const unresolvedClaims = claims.filter((claim) => claim.resolutionStatus === "unresolved");
 
       return DeliveryPackSchema.parse({
         ...pack,
         sources: evidenceSources,
         assets,
+        visualBriefs,
         proofReport: {
           checkedClaims: claims.length,
           supported: claims.filter((claim) => claim.status === "supported").length,
@@ -956,13 +1031,14 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
       "Use only platforms selected in projectBrief.platforms: " + brief.platforms.join(", ") + ". Never add another platform.",
       "Preserve exact IDs from prior-stage inputs so lineage remains machine-readable.",
       "Treat historical performance as observational evidence, not proof of causation or a guarantee of future results.",
+      "Treat projectBrief.goal and projectBrief.restrictions as binding scope and acceptance criteria.",
       "When performance records exist, preserve the winning mechanism, platform, format, and territory while producing controlled variations.",
       "Historical top-asset titles are no-copy references: do not reuse them, add punctuation to them, lightly paraphrase them, or preserve their sentence structure.",
       "When no performance records exist, do not invent learnings.",
       "Produce specific writing without invented metrics, partnerships, capabilities, or guarantees."
     ].join("\n");
     const generationStages: GenerationStage[] = [];
-    const campaignDays = Math.min(brief.durationDays, 30);
+    const { campaignDays, assetTarget } = campaignProductionScope(brief);
     const editorialMix = editorialMixFor(brief.editorialProfile);
 
     const foundationResult = await this.runStage("foundation", FoundationStageSchema, {
@@ -1040,20 +1116,32 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
         "Generate only calendar and assets from the approved foundation and architecture.",
         "Return exactly " + campaignDays + " calendar items in day order.",
         "Each calendar item must preserve an existing hook ID and series ID when applicable, plus territory, audience segment, episode, CTA, platform-fit reason, and valid source IDs.",
-        "Draft five to twelve assets for editorial refinement. Each asset must reference an exact calendar item, series, hook, segment, and territory.",
+        "Return exactly " + assetTarget + " publishable assets, matching the requested cadence.",
+        "Map every asset to a different calendar item. When assetTarget equals campaignDays, produce one asset for every calendar day.",
+        "Each asset must reference an exact calendar item, series, hook, segment, and territory.",
         "Assign one editorialMode from the supplied editorial mix and one contentFormat: short-post, thread, article, newsletter, or community-post.",
         "For X with three or more X assets, include at least one short-post, one thread, and one article.",
         "For X threads, populate threadPosts with three to twelve ordered posts and keep copy as a concise thread summary.",
-        "For articles, populate subtitle, introduction, at least three sections, conclusion, and tags; use article format for every Medium asset.",
+        "For articles, populate subtitle, introduction, at least three developed sections, conclusion, and tags; write at least 300 words unless the brief explicitly requests a shorter form; use article format for every Medium asset.",
         "For non-articles return article as null. For non-threads return threadPosts as an empty array.",
         "Set visualBriefId to an empty string; visual planning happens during editorial refinement.",
         "Asset titles must be materially new variations, not historical top-asset titles with punctuation or light paraphrasing.",
         "Claims will be linked after editorial refinement, so do not invent claim IDs."
       ].join("\n"),
       outputKeys: ["calendar", "assets"],
-      maxOutputTokens: 12000
+      maxOutputTokens: Math.max(12000, assetTarget * 1400)
     });
     const execution = normalizeExecutionStage(executionResult.output, sources, architecture, brief);
+    if (execution.assets.length !== assetTarget) {
+      throw new Error(
+        "Execution returned " + execution.assets.length +
+        " publishable assets; the campaign requires exactly " + assetTarget + "."
+      );
+    }
+    const coveredCalendarIds = new Set(execution.assets.map((asset) => asset.calendarItemId));
+    if (coveredCalendarIds.has("") || coveredCalendarIds.size !== execution.assets.length) {
+      throw new Error("Execution must map every publishable asset to a different calendar item.");
+    }
     generationStages.push(executionResult.metadata);
     await onStageComplete?.(executionResult.metadata);
 
@@ -1072,6 +1160,7 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
     };
     const editorialInstructions = commonInstructions + "\n" + EDITORIAL_POLICY + "\n" + [
       "Rewrite every draft asset once and return every exact asset ID.",
+      "Preserve the requested deliverable count; do not omit, merge, or summarize assets.",
       "Preserve platform, calendarItemId, seriesId, segment, territory, hookId, and CTA intent.",
       "Keep supported factual substance intact. Improve specificity and rhythm without inventing evidence.",
       "Return an editorialReport with an honest score, strengths, issue count, pass decision, and concise rewrite summary.",
@@ -1085,7 +1174,7 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
       input: editorialInput,
       instructions: editorialInstructions,
       outputKeys: ["assets", "editorialReport", "visualBriefs"],
-      maxOutputTokens: 16000
+      maxOutputTokens: Math.max(16000, assetTarget * 1800)
     });
     let editorial: EditorialStageOutput;
     try {
@@ -1095,17 +1184,23 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
       if (!feedback.startsWith("Editorial quality gate failed:")) throw error;
 
       const firstAttempt = editorialResult;
+      const editorialIssues = inspectEditorialAssets(
+        firstAttempt.output.assets.map((asset) => ({ ...asset, linkedClaims: [] })),
+        brief
+      );
+      const completeFeedback = "Editorial quality gate failed: " +
+        editorialIssues.map((issue) => issue.assetId + " " + issue.message).join(" ");
       let repairedAssets: EditorialStageOutput["assets"];
       let repairMetadata: GenerationStage;
 
-      if (feedback.includes("at least one article")) {
+      if (completeFeedback.includes("at least one article")) {
         const articleResult = await this.runStage("editorial", EditorialArticleRepairSchema, {
           label: "X article repair",
           input: {
             projectBrief: brief,
             evidenceSources: sources,
             candidateAssets: firstAttempt.output.assets.filter((asset) => asset.platform === "X"),
-            qualityGateFeedback: feedback
+            qualityGateFeedback: completeFeedback
           },
           instructions: commonInstructions + "\n" + EDITORIAL_POLICY + "\n" + [
             "Choose exactly one supplied X candidate asset and develop it into a complete X article.",
@@ -1134,27 +1229,43 @@ export class OpenAIContentProvider implements ContentGenerationProvider {
         );
         repairMetadata = articleResult.metadata;
       } else {
+        const affectedAssetIds = new Set(
+          editorialIssues
+            .map((issue) => issue.assetId)
+            .filter((assetId) => assetId !== "campaign")
+        );
+        const rejectedAssets = affectedAssetIds.size
+          ? firstAttempt.output.assets.filter((asset) => affectedAssetIds.has(asset.id))
+          : firstAttempt.output.assets;
         const repairedResult = await this.runStage("editorial", EditorialAssetRepairSchema, {
           label: "Editorial repair",
           input: {
             projectBrief: brief,
             editorialPolicy: EDITORIAL_POLICY,
             evidenceSources: sources,
-            rejectedAssets: firstAttempt.output.assets,
-            qualityGateFeedback: feedback
+            rejectedAssets,
+            qualityGateFeedback: completeFeedback
           },
           instructions: commonInstructions + "\n" + EDITORIAL_POLICY + "\n" + [
-            "Return only assetRepairs for the minimum number of assets needed to correct every qualityGateFeedback issue.",
+            "Return exactly one complete asset repair for every supplied rejected asset.",
+            "Correct every qualityGateFeedback issue associated with that asset.",
             "Each repair must reuse an exact rejected asset ID and preserve its platform, lineage fields, factual substance, and CTA intent.",
             "A repaired thread must contain three to twelve nonempty threadPosts of at most 280 characters each.",
             "Explicitly return threadPosts, article, editorialMode, contentFormat, and visualBriefId for every repair."
           ].join("\n"),
           outputKeys: ["assetRepairs"],
-          maxOutputTokens: 8000
+          maxOutputTokens: Math.max(8000, rejectedAssets.length * 1800)
         });
         const validAssetIds = new Set(firstAttempt.output.assets.map((asset) => asset.id));
         if (repairedResult.output.assetRepairs.some((asset) => !validAssetIds.has(asset.id))) {
           throw new Error("Editorial repair returned an unknown asset ID.");
+        }
+        const repairedAssetIds = new Set(
+          repairedResult.output.assetRepairs.map((asset) => asset.id)
+        );
+        const omittedAsset = rejectedAssets.find((asset) => !repairedAssetIds.has(asset.id));
+        if (omittedAsset) {
+          throw new Error("Editorial repair omitted " + omittedAsset.id + ".");
         }
         const repairById = new Map(
           repairedResult.output.assetRepairs.map((asset) => [asset.id, asset])
