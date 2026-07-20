@@ -51,6 +51,88 @@ type RouteProfile = {
 };
 
 const routerVersion = "csv-keyword-router-v1";
+const builtinSource = "builtin:flusso-core-v1";
+
+const builtinPromptRows = [
+  [
+    "Competitive Content Analysis & Mood Board Creator",
+    "IDEATION",
+    "Map the current content landscape and identify defensible gaps.",
+    "Separate repeated market narratives from under-served audience questions. Ground every observation in supplied evidence, name the consequence for the campaign, and turn useful gaps into concrete editorial territories."
+  ],
+  [
+    "Audience Micro-Segment Content Mapper",
+    "IDEATION",
+    "Turn a broad audience into operational messaging segments.",
+    "Define segments by decision context, awareness, needs, objections, proof requirements, taboo topics, preferred formats, cadence, and platform. Avoid demographic invention; use the brief and evidence only."
+  ],
+  [
+    "Content Series Architecture Builder",
+    "IDEATION",
+    "Design a connected campaign without repetitive posts.",
+    "Build series around distinct reader questions and progressive episodes. Give every episode a unique job, source basis, hook, audience, and CTA while preserving a coherent campaign thesis."
+  ],
+  [
+    "Multi-Variant Hook Generator",
+    "IDEATION",
+    "Create specific hooks tied to evidence and reader intent.",
+    "Generate materially different hooks using mechanisms, consequences, constraints, comparisons, or practical decisions. Reject generic hype, unsupported certainty, and cosmetic punctuation variants."
+  ],
+  [
+    "Trend-Responsive Content Ideator",
+    "IDEATION",
+    "Connect timely source material to durable brand relevance.",
+    "Use supplied dates and evidence to distinguish current facts, emerging signals, and durable principles. Flag anything likely to change and never manufacture cultural relevance."
+  ],
+  [
+    "Competitive Intelligence Integration System",
+    "OPTIMIZATION",
+    "Use competitor evidence to sharpen positioning.",
+    "Describe observable competitor patterns without guessing intent. Identify saturated claims, proof gaps, format gaps, and opportunities the brand can credibly own."
+  ],
+  [
+    "Multi-Channel Campaign Orchestrator",
+    "DISTRIBUTION",
+    "Convert campaign architecture into a capacity-aware calendar.",
+    "Assign each calendar item a distinct purpose, audience, source pack, platform-fit reason, CTA, and production dependency. Match the requested cadence and do not confuse scheduled ideas with completed assets."
+  ],
+  [
+    "Platform-Specific Content Optimizer",
+    "DISTRIBUTION",
+    "Adapt assets to selected platforms without diluting substance.",
+    "Preserve the factual thesis while changing structure, pacing, depth, CTA, and formatting for the selected platform. Never add a platform that is absent from the brief."
+  ],
+  [
+    "Multi-Format Content Atomization Engine",
+    "CREATION",
+    "Produce complete platform-native assets from approved calendar items.",
+    "Write every requested deliverable in full. Preserve calendar and evidence lineage, keep each asset materially distinct, and use the appropriate complete structure for posts, threads, newsletters, community posts, and articles."
+  ],
+  [
+    "AI-to-Human Content Refinement System",
+    "CREATION",
+    "Rewrite drafts into specific, natural, publish-ready editorial work.",
+    "Remove generic openings, repetitive contrasts, empty hype, summary-only conclusions, and artificial profundity. Add concrete mechanisms, constraints, transitions, rhythm, and a proportionate CTA without inventing facts."
+  ],
+  [
+    "Product-Accurate Visual Brief Generator",
+    "CREATION",
+    "Plan visuals that improve comprehension without adding claims.",
+    "Choose a visual only when it clarifies a mechanism, workflow, comparison, or verified dataset. Tie every factual visual element to supplied source IDs and avoid dense generated text."
+  ],
+  [
+    "Performance Pattern Recognition Analyzer",
+    "OPTIMIZATION",
+    "Extract reusable mechanisms from measured performance.",
+    "Treat historical metrics as observational. Identify the mechanism, format, platform, audience, and territory associated with performance, but do not claim causation or guarantee a repeat."
+  ],
+  [
+    "Content Iteration Engine",
+    "OPTIMIZATION",
+    "Turn measured learnings into controlled editorial variations.",
+    "Preserve the winning mechanism while producing materially new language, structure, evidence, and angle. Define what changes, what remains controlled, and what result should be measured."
+  ]
+] as const;
 
 const routeProfiles: RouteProfile[] = [
   {
@@ -202,6 +284,21 @@ function promptTags(prompt: Pick<PromptLibraryItem, "name" | "libraryStage" | "u
   return Array.from(tags).slice(0, 6);
 }
 
+function builtinPromptLibrary(): PromptLibraryItem[] {
+  return builtinPromptRows.map(([name, libraryStage, useCase, prompt], index) => {
+    const base = {
+      id: `${slugify(libraryStage)}-${slugify(name)}-${index + 1}`,
+      name,
+      libraryStage,
+      useCase,
+      prompt,
+      tags: [] as string[],
+      sourceFile: builtinSource
+    };
+    return { ...base, tags: promptTags(base) };
+  });
+}
+
 function findPromptCsv() {
   try {
     const files = fs.readdirSync(process.cwd());
@@ -214,7 +311,7 @@ function findPromptCsv() {
 
 export function loadPromptLibrary(): PromptLibraryItem[] {
   const csvFile = findPromptCsv();
-  if (!csvFile) throw new Error("Prompt library CSV was not found in the project root.");
+  if (!csvFile) return builtinPromptLibrary();
 
   try {
     const fullPath = path.join(process.cwd(), csvFile);

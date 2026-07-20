@@ -16,6 +16,7 @@ export const EDITORIAL_POLICY = [
   "For X short posts, make one point and keep the copy within 280 characters.",
   "For X threads, return three to twelve ordered posts, each within 280 characters, with progression and a real conclusion.",
   "For X articles and Medium, return a subtitle, introduction, at least three developed sections, conclusion, and tags.",
+  "Publish-ready articles should contain at least 300 words unless the brief explicitly requests a shorter form.",
   "For Medium, always use the article format.",
   "Use visuals only when they improve comprehension. Prefer deterministic charts for numeric data and avoid text-heavy generated images."
 ].join("\n");
@@ -69,7 +70,7 @@ export function editorialMixFor(profile: EditorialProfile): EditorialMixItem[] {
 
 export type EditorialIssue = {
   assetId: string;
-  code: "slop" | "short-post-length" | "thread-structure" | "thread-post-length" | "article-structure" | "medium-format" | "format-mix" | "duplicate-opening";
+  code: "slop" | "short-post-length" | "thread-structure" | "thread-post-length" | "article-structure" | "article-depth" | "medium-format" | "format-mix" | "duplicate-opening";
   message: string;
 };
 
@@ -104,6 +105,21 @@ function normalizedOpening(asset: ContentAsset) {
     .split(" ")
     .slice(0, 10)
     .join(" ");
+}
+
+function articleWordCount(asset: ContentAsset) {
+  if (!asset.article) return 0;
+  return [
+    asset.article.subtitle,
+    asset.article.introduction,
+    ...asset.article.sections.flatMap((section) => [section.heading, section.body]),
+    asset.article.conclusion
+  ]
+    .join(" ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .length;
 }
 
 export function inspectEditorialAssets(
@@ -158,6 +174,12 @@ export function inspectEditorialAssets(
           assetId: asset.id,
           code: "article-structure",
           message: "Article requires a subtitle, introduction, at least three developed sections, and conclusion."
+        });
+      } else if (articleWordCount(asset) < 300) {
+        issues.push({
+          assetId: asset.id,
+          code: "article-depth",
+          message: "Publish-ready article must contain at least 300 words."
         });
       }
     }

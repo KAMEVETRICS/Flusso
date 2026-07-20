@@ -16,6 +16,7 @@ import { buildEngineRequest } from "../../lib/openclaw-engine-tool.mjs";
 import {
   allowedMarketplaceActions,
   buildMarketplaceCommand,
+  isDirectPeerChatMessage,
   marketplaceSessionForContext
 } from "../../lib/openclaw-marketplace-tool.mjs";
 
@@ -313,17 +314,33 @@ export default definePluginEntry({
             };
           }
 
+          const latestRunId = latestRunBySession.get(sessionKey);
+          const currentRun = latestRunId ? runs.get(latestRunId) : null;
+          const isDirectPeerReply = command.action === "peer_send"
+            && isDirectPeerChatMessage(currentRun?.prompt, session);
           const playbook = marketplacePlaybooks.get(key);
-          if (!playbook || Date.now() - playbook.createdAt > MARKETPLACE_PLAYBOOK_TTL_MS) {
-            marketplacePlaybooks.delete(key);
-            throw new Error("Call next_action for this event before executing a marketplace write.");
-          }
-          if (!playbook.allowed.has(command.action)) {
-            throw new Error("The official marketplace playbook did not permit this action.");
+
+          if (!isDirectPeerReply) {
+            if (!playbook || Date.now() - playbook.createdAt > MARKETPLACE_PLAYBOOK_TTL_MS) {
+              marketplacePlaybooks.delete(key);
+              throw new Error("Call next_action for this event before executing a marketplace write.");
+            }
+            if (!playbook.allowed.has(command.action)) {
+              throw new Error("The official marketplace playbook did not permit this action.");
+            }
           }
 
-          const writeKey = JSON.stringify([sessionKey, command.action, command.jobId, command.args]);
-          if (marketplaceWrites.has(writeKey)) return marketplaceWrites.get(writeKey);
+          const writeKey = JSON.stringify([
+            sessionKey,
+            command.action,
+            command.jobId,
+            command.args,
+            command.action === "peer_send" ? currentRun?.messageKey : null
+          ]);
+          if (marketplaceWrites.has(writeKey)) {
+            if (command.action === "peer_send" && currentRun) currentRun.peerSent = true;
+            return marketplaceWrites.get(writeKey);
+          }
 
           const output = await runMarketplaceCommand(command);
           if (command.action === "apply" && !/txHash/i.test(output)) {
@@ -335,7 +352,8 @@ export default definePluginEntry({
             details: { action: command.action, jobId: command.jobId }
           };
           marketplaceWrites.set(writeKey, result);
-          advanceMarketplacePlaybook(key, command.action, playbook.allowed);
+          if (command.action === "peer_send" && currentRun) currentRun.peerSent = true;
+          if (playbook) advanceMarketplacePlaybook(key, command.action, playbook.allowed);
           return result;
         }
       };
@@ -351,9 +369,29 @@ export default definePluginEntry({
       }
     });
 
-    api.on("before_prompt_build", async (_event, context) => {
+    api.on("before_prompt_build", async (event, context) => {
       const session = marketplaceSession(context);
       if (!session) return;
+
+      const runId = getRunId(event, context);
+      const sessionKey = context.sessionKey;
+      const prompt = String(event.prompt ?? "");
+      if (
+        runId
+        && sessionKey
+        && !runs.has(runId)
+        && isFlussoA2ATurn({ agentId: context.agentId, sessionKey, prompt })
+      ) {
+        rememberRun({
+          runId,
+          sessionKey,
+          agentId: context.agentId ?? "unknown",
+          prompt,
+          marketplaceSession: session,
+          round: parseNegotiationRound(prompt),
+          messageKey: createHash("sha256").update(`${sessionKey}\n${prompt}`).digest("hex")
+        });
+      }
 
       const floor = positiveNumber("A2A_PRICE_FLOOR_USDT", 30);
       return {
@@ -361,6 +399,7 @@ export default definePluginEntry({
           "This is a Flusso marketplace provider session.",
           "Use flusso_marketplace for every marketplace lifecycle command; never use exec or shell for onchainos or okx-a2a.",
           "For a system event, call flusso_marketplace with action next_action and the exact message object as messageJson, then follow only the returned playbook.",
+          "For an a2a-agent-chat peer message, reply directly with flusso_marketplace action peer_send; next_action is only for system events.",
           "Use flusso_content_engine for pricing and fulfillment, but do not generate work before job_accepted.",
           "Flusso's hard application floor is " + floor + " USDT."
         ].join("\n")
@@ -379,6 +418,7 @@ export default definePluginEntry({
         sessionKey,
         agentId,
         prompt,
+        marketplaceSession: marketplaceSession(context),
         round: parseNegotiationRound(prompt),
         messageKey: createHash("sha256").update(`${sessionKey}\n${prompt}`).digest("hex")
       };
@@ -417,6 +457,7 @@ export default definePluginEntry({
     api.on("before_agent_finalize", async (event, context) => {
       const state = findRun(event, context);
       if (!state) return;
+      state.finalText = assistantText(event.lastAssistantMessage).trim();
       const floor = positiveNumber("A2A_PRICE_FLOOR_USDT", 30);
       const violation = findSubfloorOffer(assistantText(event.lastAssistantMessage), floor);
       if (!violation) return;
@@ -447,8 +488,32 @@ export default definePluginEntry({
       const state = findRun(event, context);
       if (!state) return;
       const lastMessage = Array.isArray(event.messages) ? event.messages.at(-1) : null;
-      const failure = event.success ? null : errorText(event.error ?? assistantText(lastMessage));
-      await persistEvent(api, state, event.success ? "completed" : "failed", failure);
+      let failure = event.success ? null : errorText(event.error ?? assistantText(lastMessage));
+
+      const session = state.marketplaceSession ?? marketplaceSession(context);
+      const directReply = state.finalText || assistantText(lastMessage).trim();
+      const isDirectPeerChat = isDirectPeerChatMessage(state.prompt, session);
+      if (
+        !failure
+        && !state.peerSent
+        && directReply
+        && isDirectPeerChat
+      ) {
+        try {
+          const command = buildMarketplaceCommand(
+            { action: "peer_send", content: directReply },
+            session,
+            positiveNumber("A2A_PRICE_FLOOR_USDT", 30)
+          );
+          await runMarketplaceCommand(command);
+          state.peerSent = true;
+        } catch (sendError) {
+          failure = errorText(sendError);
+          api.logger.error(`${pluginId}: unable to relay direct peer reply: ${failure}`);
+        }
+      }
+
+      await persistEvent(api, state, failure ? "failed" : "completed", failure);
     });
   }
 });

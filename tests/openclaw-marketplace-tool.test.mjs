@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   allowedMarketplaceActions,
   buildMarketplaceCommand,
+  isDirectPeerChatMessage,
   marketplaceSessionForContext,
   parseMarketplaceSession
 } from "../lib/openclaw-marketplace-tool.mjs";
@@ -43,6 +44,25 @@ test("binds writes to the session provider, counterparty, and job", () => {
   assert.deepEqual(
     buildMarketplaceCommand({ action: "peer_send", content: "ready" }, session).args,
     ["xmtp-send", "--job-id", jobId, "--to-agent-id", "6245", "--message", "ready"]
+  );
+});
+
+test("recognizes only a session-bound direct peer chat message", () => {
+  const message = {
+    msgType: "a2a-agent-chat",
+    jobId,
+    receiverAgentId: "5782",
+    sender: { agentId: "6245" },
+    payload: { source: "okx-agent-task" }
+  };
+  assert.equal(isDirectPeerChatMessage(JSON.stringify(message), session), true);
+  assert.equal(
+    isDirectPeerChatMessage({ ...message, receiverAgentId: "9999" }, session),
+    false
+  );
+  assert.equal(
+    isDirectPeerChatMessage({ ...message, msgType: "system", event: "job_accepted" }, session),
+    false
   );
 });
 
