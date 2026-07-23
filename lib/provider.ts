@@ -305,7 +305,7 @@ function buildListing() {
     description: "Evidence-backed content strategy and publish-ready campaign packs for founders, protocols, and growing teams.",
     services: [
       {
-        name: "Content Engineering",
+        name: "Content Engineering Campaign",
         type: "A2A" as const,
         fee: "",
         description: "Engineers a source-backed campaign strategy and platform-native content pack for the requested brand, audience, and goal.",

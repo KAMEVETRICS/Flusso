@@ -12,7 +12,7 @@
 
 ## Service
 
-**Name:** Complete Content Engineering Campaign
+**Name:** Content Engineering Campaign
 
 **Pricing:** Negotiable
 

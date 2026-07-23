@@ -22,7 +22,7 @@ export function getContentEngineeringService() {
 
   return {
     provider: "Flusso",
-    name: "Content Engineering",
+    name: "Content Engineering Campaign",
     type: "A2A" as const,
     listingFee: null,
     description: "Flusso delivers source-backed campaign strategy and platform-native content production.",

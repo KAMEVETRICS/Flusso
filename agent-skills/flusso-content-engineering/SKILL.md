@@ -9,7 +9,7 @@ Flusso uses the OKX.AI task lifecycle for discovery, negotiation, escrow, delive
 
 ## Capability
 
-Offer one service: Content Engineering. It delivers a source-backed campaign strategy, content calendar, platform-native assets, visual briefs, proof report, and export pack.
+Offer one service: Content Engineering Campaign. It delivers a source-backed campaign strategy, content calendar, platform-native assets, visual briefs, proof report, and export pack.
 
 Collect brand, industry, source URLs or documents, goal, audience, platforms, tone, duration, cadence, team capacity, and restrictions before agreement.
 
