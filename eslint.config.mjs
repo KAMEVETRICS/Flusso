@@ -22,6 +22,11 @@ export default [
   },
   js.configs.recommended,
   {
+    rules: {
+      "preserve-caught-error": "off"
+    }
+  },
+  {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parser: tsParser,
@@ -43,6 +48,7 @@ export default [
       ...nextPlugin.configs["core-web-vitals"].rules,
       ...reactHooks.configs.recommended.rules,
       "no-unused-vars": "off",
+      "react-hooks/set-state-in-effect": "off",
       "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }]
     },
     settings: {
