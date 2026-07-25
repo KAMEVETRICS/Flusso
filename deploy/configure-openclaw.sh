@@ -39,7 +39,7 @@ if (!agents.some((agent) => agent?.id === "main")) {
 }
 process.stdout.write(JSON.stringify(agents.filter((agent) => agent?.id !== "flusso")));
 ' "$agents_json")"
-run_openclaw config set agents.list "$agents_json" --strict-json
+run_openclaw config set agents.list "$agents_json" --strict-json --replace
 
 agent_index="$(node -e '
 const agents = JSON.parse(process.argv[1]);
