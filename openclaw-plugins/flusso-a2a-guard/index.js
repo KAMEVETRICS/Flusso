@@ -17,6 +17,7 @@ import {
   allowedMarketplaceActions,
   buildMarketplaceCommand,
   isDirectPeerChatMessage,
+  isNonfatalUserNotificationFailure,
   marketplaceSessionForContext
 } from "../../lib/openclaw-marketplace-tool.mjs";
 
@@ -342,7 +343,21 @@ export default definePluginEntry({
             return marketplaceWrites.get(writeKey);
           }
 
-          const output = await runMarketplaceCommand(command);
+          let output;
+          try {
+            output = await runMarketplaceCommand(command);
+          } catch (error) {
+            if (
+              command.action !== "user_notify"
+              || !isNonfatalUserNotificationFailure(error)
+            ) {
+              throw error;
+            }
+            api.logger.warn(
+              `${pluginId}: no interactive user session is attached; skipped the optional local notification.`
+            );
+            output = "Marketplace action completed; optional local operator notification skipped because no interactive user session is attached.";
+          }
           if (command.action === "apply" && !/txHash/i.test(output)) {
             throw new Error("Marketplace apply returned without a transaction hash.");
           }

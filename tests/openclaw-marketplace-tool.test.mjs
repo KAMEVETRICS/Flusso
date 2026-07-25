@@ -4,6 +4,7 @@ import {
   allowedMarketplaceActions,
   buildMarketplaceCommand,
   isDirectPeerChatMessage,
+  isNonfatalUserNotificationFailure,
   marketplaceSessionForContext,
   parseMarketplaceSession
 } from "../lib/openclaw-marketplace-tool.mjs";
@@ -34,6 +35,17 @@ test("builds next-action without passing event data through a shell", () => {
   assert.deepEqual(command.args.slice(0, 7), [
     "agent", "next-action", "--role", "auto", "--agentId", "5782", "--message"
   ]);
+  assert.deepEqual(JSON.parse(command.args.at(-1)), event);
+});
+
+test("unwraps the full A2A system envelope before calling next-action", () => {
+  const event = { source: "system", event: "job_asp_selected", jobId, providerAgentId: "5782" };
+  const command = buildMarketplaceCommand({
+    action: "next_action",
+    messageJson: JSON.stringify({ agentId: "5782", message: event })
+  }, session);
+
+  assert.equal(command.event, "job_asp_selected");
   assert.deepEqual(JSON.parse(command.args.at(-1)), event);
 });
 
@@ -118,5 +130,32 @@ test("rejects malformed or mismatched event envelopes", () => {
       messageJson: JSON.stringify({ source: "system", event: "job_asp_selected", jobId, providerAgentId: "9999" })
     }, session),
     /provider does not match/
+  );
+  assert.throws(
+    () => buildMarketplaceCommand({
+      action: "next_action",
+      messageJson: JSON.stringify({
+        agentId: "9999",
+        message: { source: "system", event: "job_asp_selected", jobId, providerAgentId: "5782" }
+      })
+    }, session),
+    /envelope agent does not match/
+  );
+});
+
+test("classifies only the missing interactive-session notification failure as nonfatal", () => {
+  assert.equal(
+    isNonfatalUserNotificationFailure(
+      new Error("okx-a2a.dispatch_user did not deliver to any OpenClaw user session (dispatched=0 failed=0)")
+    ),
+    true
+  );
+  assert.equal(
+    isNonfatalUserNotificationFailure(new Error("code=NO_DELIVERABLE_USER_SESSION")),
+    true
+  );
+  assert.equal(
+    isNonfatalUserNotificationFailure(new Error("wallet signature failed")),
+    false
   );
 });
