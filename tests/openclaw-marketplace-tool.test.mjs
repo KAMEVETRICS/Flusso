@@ -22,6 +22,7 @@ test("parses and authorizes only a trusted provider marketplace session", () => 
     marketplaceSessionForContext({ agentId: "main", sessionKey, expectedProviderAgentId: "5782" }),
     session
   );
+  assert.equal(marketplaceSessionForContext({ agentId: "flusso", sessionKey }), null);
   assert.equal(marketplaceSessionForContext({ agentId: "crestodian", sessionKey }), null);
   assert.equal(marketplaceSessionForContext({ agentId: "main", sessionKey, expectedProviderAgentId: "9999" }), null);
 });

@@ -66,9 +66,9 @@ const response = parseCliJson(
     [
       "agent",
       "--agent",
-      "flusso",
+      "main",
       "--session-key",
-      `flusso-readiness-${Date.now()}`,
+      `flusso-main-readiness-${Date.now()}`,
       "--message",
       `Reply with exactly ${token}. Do not call tools.`,
       "--json"
@@ -83,4 +83,4 @@ if (!containsExactToken(response, token)) {
   throw new Error(`Flusso responded, but did not return the required ${token} token.`);
 }
 
-console.log(JSON.stringify({ status: "ready", agent: "flusso", response: token }));
+console.log(JSON.stringify({ status: "ready", agent: "main", response: token }));

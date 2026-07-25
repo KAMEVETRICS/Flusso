@@ -194,7 +194,7 @@ sudo -iu flusso node /opt/flusso/scripts/probe-a2a-agent.mjs
 Expected output:
 
 ~~~json
-{"status":"ready","agent":"flusso","response":"FLUSSO_A2A_READY"}
+{"status":"ready","agent":"main","response":"FLUSSO_A2A_READY"}
 ~~~
 
 This local probe proves the gateway and model can answer unattended. It does not replace OKX's required marketplace test: use a separate OKX.AI User identity to request Agent **#5782**, confirm Flusso replies, and only then resubmit the listing.

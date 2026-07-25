@@ -36,13 +36,18 @@ test("uses a counter in round one and a decline in round two", () => {
   assert.equal(parseNegotiationRound("Treat this as negotiation round 2."), 2);
 });
 
-test("recognizes OKX group sessions and explicit dry runs", () => {
-  assert.equal(isFlussoA2ATurn({ agentId: "flusso", sessionKey: "agent:flusso:group:123", prompt: "hello" }), true);
-  assert.equal(isFlussoA2ATurn({ agentId: "flusso", sessionKey: "tui:1", prompt: "Use the Flusso Content Engineering capability." }), true);
+test("recognizes only the main OKX A2A runtime", () => {
+  assert.equal(isFlussoA2ATurn({
+    agentId: "main",
+    sessionKey: "agent:main:okx-a2a:group:okx-xmtp:my=5782&to=6245&job=123",
+    prompt: "hello"
+  }), true);
+  assert.equal(isFlussoA2ATurn({ agentId: "flusso", sessionKey: "agent:flusso:group:123", prompt: "hello" }), false);
+  assert.equal(isFlussoA2ATurn({ agentId: "main", sessionKey: "agent:main:main", prompt: "Use the Flusso Content Engineering capability." }), false);
   assert.equal(isFlussoA2ATurn({ agentId: "crestodian", sessionKey: "agent:crestodian:group:123", prompt: "hello" }), false);
 });
-test("restricts the private engine to Flusso and the main A2A runtime", () => {
-  assert.equal(canUseFlussoPrivateTool({ agentId: "flusso", sessionKey: "tui:1" }), true);
+test("restricts the private engine to the main A2A runtime", () => {
+  assert.equal(canUseFlussoPrivateTool({ agentId: "flusso", sessionKey: "tui:1" }), false);
   assert.equal(canUseFlussoPrivateTool({
     agentId: "main",
     sessionKey: "agent:main:okx-a2a:group:okx-xmtp:my=5782&to=6245&job=123"
