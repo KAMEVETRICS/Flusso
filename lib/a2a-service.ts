@@ -43,7 +43,7 @@ export function getContentEngineeringService() {
       "strategy, calendar, and content-pack exports"
     ],
     negotiation: {
-      configured: floor !== null && target !== null,
+      configured: floor !== null || target !== null,
       currency: "USDT" as const,
       floor,
       target,
@@ -58,8 +58,10 @@ export function getContentEngineeringService() {
         "revision allowance"
       ],
       rules: [
-        "Never quote below the configured floor.",
-        "When the budget is too low, reduce scope before reducing price.",
+        floor === null
+          ? "Pricing is negotiable; judge each request by workload and the user's stated budget."
+          : "Never quote below the configured floor.",
+        "When the budget is too low for the requested workload, reduce scope or counter at a justified price.",
         "Include one revision unless the agreement says otherwise.",
         "Confirm deliverables, price, deadline, and acceptance criteria before accepting."
       ]

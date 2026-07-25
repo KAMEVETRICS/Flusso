@@ -33,3 +33,34 @@ test('uncapped quote opens above target', () => {
   assert.equal(quote.offeredPrice, 115);
   assert.equal(quote.requiresReducedScope, false);
 });
+
+test('unconfigured pricing stays negotiable and respects the supplied budget', () => {
+  const quote = decideA2AQuote(
+    {
+      floor: null,
+      target: null,
+      openingMarkupPercent: 15,
+      maxAutonomousRounds: 2
+    },
+    { clientBudget: 0.1, round: 1 }
+  );
+  assert.equal(quote.decision, 'quote');
+  assert.equal(quote.offeredPrice, 0.1);
+  assert.equal(quote.minimumPrice, null);
+  assert.equal(quote.withinClientBudget, true);
+});
+
+test('an optional target can guide a quote without imposing a floor', () => {
+  const quote = decideA2AQuote(
+    {
+      floor: null,
+      target: 1,
+      openingMarkupPercent: 15,
+      maxAutonomousRounds: 2
+    },
+    { clientBudget: 0.5, round: 1 }
+  );
+  assert.equal(quote.offeredPrice, 0.5);
+  assert.equal(quote.minimumPrice, null);
+  assert.equal(quote.requiresReducedScope, true);
+});

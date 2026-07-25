@@ -8,8 +8,10 @@ function required(name) {
   return value;
 }
 
-function expectedNumber(name) {
-  const value = Number(required(name));
+function optionalExpectedNumber(name) {
+  const raw = process.env[name]?.trim();
+  if (!raw) return null;
+  const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error(name + " must be a positive number.");
   }
@@ -18,22 +20,22 @@ function expectedNumber(name) {
 
 const baseUrl = required("CONTENT_ENGINE_URL");
 const apiKey = required("A2A_INTERNAL_API_KEY");
-const expectedFloor = expectedNumber("A2A_PRICE_FLOOR_USDT");
-const expectedTarget = expectedNumber("A2A_PRICE_TARGET_USDT");
+const expectedFloor = optionalExpectedNumber("A2A_PRICE_FLOOR_USDT");
+const expectedTarget = optionalExpectedNumber("A2A_PRICE_TARGET_USDT");
 const expectedMarkup = process.env.A2A_OPENING_MARKUP_PERCENT?.trim()
-  ? expectedNumber("A2A_OPENING_MARKUP_PERCENT")
+  ? optionalExpectedNumber("A2A_OPENING_MARKUP_PERCENT")
   : 15;
 const endpoint = new URL("/api/internal/a2a/service", baseUrl);
 const quoteEndpoint = new URL("/api/internal/a2a/quote", baseUrl);
 
-async function requestQuote(round) {
+async function requestQuote(clientBudget, round) {
   const quoteResponse = await fetch(quoteEndpoint, {
     method: "POST",
     headers: {
       Authorization: "Bearer " + apiKey,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ clientBudget: expectedFloor - 1, round }),
+    body: JSON.stringify({ clientBudget, round }),
     signal: AbortSignal.timeout(10_000)
   });
   const quotePayload = await quoteResponse.json();
@@ -75,7 +77,7 @@ const assertions = [
   ["provider", service.provider, "Flusso"],
   ["service type", service.type, "A2A"],
   ["currency", negotiation.currency, "USDT"],
-  ["configured", negotiation.configured, true],
+  ["configured", negotiation.configured, expectedFloor !== null || expectedTarget !== null],
   ["floor", negotiation.floor, expectedFloor],
   ["target", negotiation.target, expectedTarget],
   ["opening markup", negotiation.openingMarkupPercent, expectedMarkup]
@@ -89,17 +91,28 @@ for (const [label, actual, expected] of assertions) {
   }
 }
 
-const firstRound = await requestQuote(1);
-if (firstRound.decision !== "counter" || firstRound.offeredPrice !== expectedFloor) {
-  throw new Error("Below-floor round one did not counter at the configured floor.");
+if (expectedFloor === null) {
+  const negotiatedQuote = await requestQuote(0.1, 1);
+  if (negotiatedQuote.decision !== "quote" || negotiatedQuote.offeredPrice !== 0.1) {
+    throw new Error("Negotiable pricing did not preserve the supplied 0.1 USDT budget.");
+  }
+} else {
+  const belowFloorBudget = Number(Math.max(0.00001, expectedFloor / 2).toFixed(5));
+  const firstRound = await requestQuote(belowFloorBudget, 1);
+  if (firstRound.decision !== "counter" || firstRound.offeredPrice !== expectedFloor) {
+    throw new Error("Below-floor round one did not counter at the configured floor.");
+  }
+
+  const secondRound = await requestQuote(belowFloorBudget, 2);
+  if (secondRound.decision !== "decline" || secondRound.offeredPrice !== null) {
+    throw new Error("Below-floor round two did not decline the negotiation.");
+  }
 }
 
-const secondRound = await requestQuote(2);
-if (secondRound.decision !== "decline" || secondRound.offeredPrice !== null) {
-  throw new Error("Below-floor round two did not decline the negotiation.");
-}
-
-const openingOffer = Number((expectedTarget * (1 + expectedMarkup / 100)).toFixed(6));
+const pricingTarget = expectedTarget ?? expectedFloor;
+const openingOffer = pricingTarget === null
+  ? null
+  : Number((pricingTarget * (1 + expectedMarkup / 100)).toFixed(6));
 console.log(
   JSON.stringify(
     {
@@ -113,7 +126,8 @@ console.log(
         floor: negotiation.floor,
         target: negotiation.target,
         openingOffer,
-        floorEnforced: true
+        floorEnforced: expectedFloor !== null,
+        mode: expectedFloor === null ? "negotiable" : "configured-floor"
       }
     },
     null,

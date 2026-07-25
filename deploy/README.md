@@ -80,7 +80,7 @@ Edit the environment:
 sudo editor /etc/flusso/flusso.env
 ~~~
 
-Set **OPENAI_API_KEY**, **A2A_INTERNAL_API_KEY**, and **DATABASE_URL**. Keep the pricing at floor 30, target 100, and markup 15. Quote the database URL if it contains **&** or other shell-sensitive characters.
+Set **OPENAI_API_KEY**, **A2A_INTERNAL_API_KEY**, and **DATABASE_URL**. Leave the pricing floor and target blank for marketplace-negotiated pricing. Quote the database URL if it contains **&** or other shell-sensitive characters.
 
 Run the installer again:
 
@@ -141,7 +141,7 @@ sudo systemctl enable --now flusso-a2a-health.timer
 sudo systemctl start flusso-a2a-health.service
 ~~~
 
-The health timer runs the official runtime switch, agent refresh, and final setup checks every five minutes. It requires at least one registered communication identity and one active client, and it verifies that the OpenClaw gateway accepts authenticated RPC calls. OpenClaw still runs through its official user gateway. The Flusso plugin only adds durable turn tracking, bounded binding recovery, and final outbound pricing enforcement.
+The health timer runs the official runtime switch, agent refresh, and final setup checks every five minutes. It requires at least one registered communication identity and one active client, and it verifies that the OpenClaw gateway accepts authenticated RPC calls. OpenClaw still runs through its official user gateway. The Flusso plugin adds durable turn tracking, bounded binding recovery, session-bound marketplace actions, and an optional operator-configured pricing guard.
 
 ## 4. Verify production
 
@@ -155,10 +155,11 @@ Expected pricing output:
 
 ~~~json
 {
-  "floor": 30,
-  "target": 100,
-  "openingOffer": 115,
-  "floorEnforced": true
+  "floor": null,
+  "target": null,
+  "openingOffer": null,
+  "floorEnforced": false,
+  "mode": "negotiable"
 }
 ~~~
 
@@ -228,8 +229,8 @@ The updater refuses to run over local VPS changes, pulls only with fast-forward 
 Before listing activation:
 
 1. Verify the Agent can read the private service policy.
-2. Simulate 20 USDT twice and confirm round one counters at 30 USDT and round two declines.
-3. Simulate an accepted task at 30 USDT or more.
+2. Simulate a low-budget request and confirm the Agent follows the marketplace workload rubric instead of imposing a hidden floor.
+3. Confirm a fair offered price is preserved exactly, while an unfair offer receives a justified counter rather than an arbitrary minimum.
 4. Confirm generation does not start before the accepted event.
 5. Run one full accepted-job lifecycle with a test brief.
 6. Inspect the proof report and all three exports.

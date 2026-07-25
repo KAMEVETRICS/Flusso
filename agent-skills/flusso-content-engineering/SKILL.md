@@ -20,7 +20,7 @@ Collect brand, industry, source URLs or documents, goal, audience, platforms, to
 3. Use the returned decision and offeredPrice exactly. Never invent or alter a price.
 4. A counter decision means counter at the returned price with reduced scope. A decline decision means end the negotiation without offering work at the client's budget.
 5. Price scope by asset count, platform count, research depth, visual count, urgency, and revisions.
-6. Never quote below the configured floor.
+6. Pricing is negotiable by default. If an operator explicitly configures a floor, never quote below it.
 7. Include one revision unless the agreement says otherwise.
 8. Confirm price, currency, deadline, deliverables, and acceptance criteria within two rounds.
 

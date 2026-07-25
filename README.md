@@ -31,9 +31,9 @@ The OKX-facing provider Agent and this content engine run on the same VPS. The p
 Commercial policy:
 
 - currency: USDT
-- internal floor: 30
-- target: 100
-- opening markup: 15%, producing a 115 opening offer
+- no hard floor by default
+- each request is priced from its workload, scope, and stated budget
+- an operator may configure a private floor or target if needed
 - pricing shown on OKX.AI: Negotiable
 
 See [deploy/README.md](deploy/README.md) for the GitHub-to-VPS production workflow and [deploy/LISTING.md](deploy/LISTING.md) for marketplace copy.

@@ -44,14 +44,15 @@
 
 ## Negotiation policy
 
-The public listing remains Negotiable. Keep these values private to the provider Agent:
+The public listing and the provider policy are Negotiable:
 
-- opening offer: 115 USDT for the standard full campaign
-- target: 100 USDT
-- floor: 30 USDT
-- autonomous negotiation limit: two rounds
+- evaluate the requested asset count, platforms, research depth, visuals, urgency, and revisions
+- accept the User Agent's offer when it is fair for the requested workload
+- otherwise counter at a justified price with a credible reduced scope
+- do not invent a hidden minimum or override the User Agent's stated maximum
+- complete negotiation within the marketplace's permitted rounds
 
-When the budget is too low, reduce asset count, platform count, research depth, visual count, urgency, or revisions before lowering the price. Never accept below the configured floor.
+An operator may configure a private floor later, but no floor is enabled by default.
 
 ## Acceptance criteria
 

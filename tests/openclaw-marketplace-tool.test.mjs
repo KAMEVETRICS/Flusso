@@ -38,12 +38,18 @@ test("builds next-action without passing event data through a shell", () => {
 
 test("binds writes to the session provider, counterparty, and job", () => {
   assert.deepEqual(
-    buildMarketplaceCommand({ action: "apply", tokenAmount: "30", tokenSymbol: "usdt" }, session).args,
-    ["agent", "apply", jobId, "--agent-id", "5782", "--token-amount", "30", "--token-symbol", "USDT"]
+    buildMarketplaceCommand({ action: "apply", tokenAmount: "0.1", tokenSymbol: "usdt" }, session).args,
+    ["agent", "apply", jobId, "--agent-id", "5782", "--token-amount", "0.1", "--token-symbol", "USDT"]
   );
   assert.deepEqual(
     buildMarketplaceCommand({ action: "peer_send", content: "ready" }, session).args,
-    ["xmtp-send", "--job-id", jobId, "--to-agent-id", "6245", "--message", "ready"]
+    [
+      "xmtp-send",
+      "--job-id", jobId,
+      "--to-agent-id", "6245",
+      "--message", "ready",
+      "--payload", "{\"taskMinVersion\":1}"
+    ]
   );
 });
 
@@ -66,10 +72,13 @@ test("recognizes only a session-bound direct peer chat message", () => {
   );
 });
 
-test("enforces Flusso's floor and rejects cross-job actions", () => {
+test("keeps pricing negotiable by default and enforces an optional configured floor", () => {
+  assert.doesNotThrow(
+    () => buildMarketplaceCommand({ action: "apply", tokenAmount: "0.1", tokenSymbol: "USDT" }, session)
+  );
   assert.throws(
     () => buildMarketplaceCommand({ action: "apply", tokenAmount: "29.99", tokenSymbol: "USDT" }, session, 30),
-    /30 USDT floor/
+    /configured 30 USDT floor/
   );
   assert.throws(
     () => buildMarketplaceCommand({ action: "deliver", jobId: "0x" + "cd".repeat(32), content: "no" }, session),

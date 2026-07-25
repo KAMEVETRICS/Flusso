@@ -106,9 +106,9 @@ function advanceMarketplacePlaybook(key, action, allowed) {
   marketplacePlaybooks.delete(key);
 }
 
-function positiveNumber(name, fallback) {
+function optionalPositiveNumber(name) {
   const value = Number(process.env[name]);
-  return Number.isFinite(value) && value > 0 ? value : fallback;
+  return Number.isFinite(value) && value > 0 ? value : null;
 }
 
 function getRunId(event, context) {
@@ -297,7 +297,7 @@ export default definePluginEntry({
         description: "Use this native adapter for every marketplace lifecycle command. Call next_action first with the exact system-event message JSON, then execute only the action prescribed by the returned playbook. Never use shell execution for marketplace commands.",
         parameters: marketplaceToolParameters,
         async execute(_id, params) {
-          const floor = positiveNumber("A2A_PRICE_FLOOR_USDT", 30);
+          const floor = optionalPositiveNumber("A2A_PRICE_FLOOR_USDT");
           const command = buildMarketplaceCommand(params, session, floor);
           const key = marketplacePlaybookKey(sessionKey, command.jobId);
 
@@ -393,7 +393,10 @@ export default definePluginEntry({
         });
       }
 
-      const floor = positiveNumber("A2A_PRICE_FLOOR_USDT", 30);
+      const floor = optionalPositiveNumber("A2A_PRICE_FLOOR_USDT");
+      const pricingInstruction = floor === null
+        ? "Pricing is negotiable. No local hard application floor is configured; follow the official marketplace playbook, evaluate the actual workload, and use the user's stated budget and maximum when deciding whether to apply or counter."
+        : "Flusso's configured hard application floor is " + floor + " USDT.";
       return {
         prependSystemContext: [
           "This is a Flusso marketplace provider session.",
@@ -401,7 +404,7 @@ export default definePluginEntry({
           "For a system event, call flusso_marketplace with action next_action and the exact message object as messageJson, then follow only the returned playbook.",
           "For an a2a-agent-chat peer message, reply directly with flusso_marketplace action peer_send; next_action is only for system events.",
           "Use flusso_content_engine for pricing and fulfillment, but do not generate work before job_accepted.",
-          "Flusso's hard application floor is " + floor + " USDT."
+          pricingInstruction
         ].join("\n")
       };
     }, { priority: 200 });
@@ -458,7 +461,7 @@ export default definePluginEntry({
       const state = findRun(event, context);
       if (!state) return;
       state.finalText = assistantText(event.lastAssistantMessage).trim();
-      const floor = positiveNumber("A2A_PRICE_FLOOR_USDT", 30);
+      const floor = optionalPositiveNumber("A2A_PRICE_FLOOR_USDT");
       const violation = findSubfloorOffer(assistantText(event.lastAssistantMessage), floor);
       if (!violation) return;
 
@@ -478,7 +481,7 @@ export default definePluginEntry({
     api.on("message_sending", async (event, context) => {
       const state = findRun(event, context);
       if (!state || typeof event.content !== "string") return;
-      const floor = positiveNumber("A2A_PRICE_FLOOR_USDT", 30);
+      const floor = optionalPositiveNumber("A2A_PRICE_FLOOR_USDT");
       if (!findSubfloorOffer(event.content, floor)) return;
       api.logger.error(`${pluginId}: replaced an outbound below-floor offer for run ${state.runId}.`);
       return { content: floorFallback(floor, state.round) };
@@ -503,7 +506,7 @@ export default definePluginEntry({
           const command = buildMarketplaceCommand(
             { action: "peer_send", content: directReply },
             session,
-            positiveNumber("A2A_PRICE_FLOOR_USDT", 30)
+            optionalPositiveNumber("A2A_PRICE_FLOOR_USDT")
           );
           await runMarketplaceCommand(command);
           state.peerSent = true;

@@ -44,26 +44,38 @@ export function decideA2AQuote(
   policy: A2ANegotiationPolicy,
   request: A2AQuoteRequest
 ) {
-  if (policy.floor === null) {
-    throw Error("A2A pricing must be configured before quoting.");
-  }
-  if (policy.target === null) {
-    throw Error("A2A pricing must be configured before quoting.");
-  }
-
-  const { floor, target } = policy;
-  const openingOffer = money(target * (1 + policy.openingMarkupPercent / 100));
   const budget = request.clientBudget ?? null;
+  const target = policy.target ?? policy.floor;
 
-  if (budget !== null && budget < floor) {
+  if (target === null) {
+    return {
+      decision: budget === null ? "negotiate" as const : "quote" as const,
+      currency: "USDT" as const,
+      offeredPrice: budget,
+      minimumPrice: null,
+      targetPrice: null,
+      openingOffer: null,
+      withinClientBudget: budget === null ? null : true,
+      requiresReducedScope: false,
+      instruction: budget === null
+        ? "Ask for the user's budget and scope, then price the actual workload using the marketplace playbook."
+        : "Evaluate the workload against the user's budget. Accept it when fair; otherwise counter at a justified price using the marketplace playbook."
+    };
+  }
+
+  const floor = policy.floor;
+  const openingOffer = money(target * (1 + policy.openingMarkupPercent / 100));
+
+  if (floor !== null && budget !== null && budget < floor) {
     return belowFloorDecision(policy, floor, target, openingOffer, request.round);
   }
 
   const offeredPrice = budget === null ? openingOffer : Math.min(openingOffer, budget);
+  const boundedOffer = floor === null ? offeredPrice : Math.max(floor, offeredPrice);
   return {
     decision: "quote" as const,
     currency: "USDT" as const,
-    offeredPrice: money(Math.max(floor, offeredPrice)),
+    offeredPrice: money(boundedOffer),
     minimumPrice: floor,
     targetPrice: target,
     openingOffer,
