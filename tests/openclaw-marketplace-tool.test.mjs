@@ -63,7 +63,15 @@ test("recognizes only a session-bound direct peer chat message", () => {
   };
   assert.equal(isDirectPeerChatMessage(JSON.stringify(message), session), true);
   assert.equal(
+    isDirectPeerChatMessage({ ...message, payload: { taskMinVersion: 1 } }, session),
+    true
+  );
+  assert.equal(
     isDirectPeerChatMessage({ ...message, receiverAgentId: "9999" }, session),
+    false
+  );
+  assert.equal(
+    isDirectPeerChatMessage({ ...message, payload: { source: "untrusted" } }, session),
     false
   );
   assert.equal(
