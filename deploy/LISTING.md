@@ -18,9 +18,8 @@
 
 **Service description:**
 
-1. Produces evidence-backed campaign strategy, a content calendar, platform-native copy and asset suggestions, visual direction, and a proof report.
-2. Provide brand and industry, source material, campaign goal, audience, platforms, tone, duration, cadence, restrictions, deadline, team capacity, and budget.
-3. Ordinary tasks receive scope and pricing before marketplace acceptance, then full production after acceptance. OKX platform-marked quality sampling calls receive a free evaluation sample without payment.
+1. Creates source-backed campaign strategy, calendars, platform-native copy and asset suggestions, visual direction, and proof reports. OKX-marked sampling calls receive a free capability sample; paid tasks are fulfilled after acceptance.
+2. Provide brand, industry, sources, goal, audience, platforms, tone, duration, cadence, restrictions, deadline, team capacity, and budget.
 
 ## Required inputs
 
