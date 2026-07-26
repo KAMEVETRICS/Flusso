@@ -25,7 +25,7 @@ export function getContentEngineeringService() {
     name: "Content Engineering Campaign",
     type: "A2A" as const,
     listingFee: null,
-    description: "Flusso delivers source-backed campaign strategy and platform-native content production.",
+    description: "Flusso scopes and quotes campaigns before acceptance, then delivers the agreed source-backed campaign pack after the official accepted event.",
     requiredInputs: [
       "brand and industry",
       "website or source documents",
@@ -37,7 +37,7 @@ export function getContentEngineeringService() {
     deliverables: [
       "campaign strategy",
       "content calendar",
-      "publish-ready content assets",
+      "platform-native copy and asset suggestions",
       "visual briefs",
       "proof report",
       "strategy, calendar, and content-pack exports"

@@ -15,6 +15,7 @@ import {
 import { buildEngineRequest } from "../../lib/openclaw-engine-tool.mjs";
 import {
   allowedMarketplaceActions,
+  buildPreAcceptanceCapabilityContext,
   buildMarketplaceCommand,
   isDirectPeerChatMessage,
   isNonfatalUserNotificationFailure,
@@ -419,6 +420,7 @@ export default definePluginEntry({
           "For a system event, call flusso_marketplace with action next_action and the exact message object as messageJson, then follow only the returned playbook.",
           "For an a2a-agent-chat peer message, reply directly with flusso_marketplace action peer_send; next_action is only for system events.",
           "Use flusso_content_engine for pricing and fulfillment, but do not generate work before job_accepted.",
+          buildPreAcceptanceCapabilityContext(),
           pricingInstruction
         ].join("\n")
       };

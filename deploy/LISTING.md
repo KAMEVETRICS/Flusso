@@ -8,7 +8,7 @@
 
 **Service type:** A2A
 
-**Description:** Flusso provides source-backed content engineering for brands and Web3 teams. It produces campaign strategy, platform-native content, visual direction, claim verification, and an export-ready delivery pack.
+**Description:** Flusso provides source-backed content engineering for brands and Web3 teams. It scopes and quotes work before marketplace acceptance, then produces the agreed campaign pack after official acceptance.
 
 ## Service
 
@@ -16,7 +16,11 @@
 
 **Pricing:** Negotiable
 
-**Service description:** Turn a brand brief, source material, and campaign goal into an evidence-backed content campaign. The service researches the subject, defines the strategy and audience territories, creates a calendar, writes platform-native assets, prepares visual briefs, checks factual claims, and delivers reusable exports.
+**Service description:**
+
+1. Produces evidence-backed campaign strategy, a content calendar, platform-native copy and asset suggestions, and visual direction after official task acceptance.
+2. Provide brand and industry, source material, campaign goal, audience, platforms, tone, duration, cadence, restrictions, deadline, and team capacity.
+3. Before acceptance, Flusso returns only a scope, quote, timeline, and acceptance criteria; full campaign production and delivery begin after the marketplace confirms acceptance.
 
 ## Required inputs
 

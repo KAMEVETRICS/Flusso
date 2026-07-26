@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   allowedMarketplaceActions,
+  buildPreAcceptanceCapabilityContext,
   buildMarketplaceCommand,
   isDirectPeerChatMessage,
   isNonfatalUserNotificationFailure,
@@ -12,6 +13,15 @@ import {
 const jobId = "0x" + "ab".repeat(32);
 const sessionKey = "agent:main:okx-a2a:group:okx-xmtp:my=5782&to=6245&job=" + jobId;
 const session = parseMarketplaceSession(sessionKey);
+
+test("states the capability boundary reviewers see before acceptance", () => {
+  const context = buildPreAcceptanceCapabilityContext();
+  assert.match(context, /concrete scope confirmation/);
+  assert.match(context, /delivery window and acceptance criteria/);
+  assert.match(context, /not final campaign production/);
+  assert.match(context, /official job_accepted event/);
+  assert.match(context, /private content engine/);
+});
 
 test("parses and authorizes only a trusted provider marketplace session", () => {
   assert.deepEqual(session, {
