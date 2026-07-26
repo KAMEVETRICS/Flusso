@@ -1,5 +1,6 @@
 /* global AbortSignal, console, fetch */
 import process from "node:process";
+import { readFile } from "node:fs/promises";
 import { URL } from "node:url";
 
 function required(name) {
@@ -20,6 +21,8 @@ function optionalExpectedNumber(name) {
 
 const baseUrl = required("CONTENT_ENGINE_URL");
 const apiKey = required("A2A_INTERNAL_API_KEY");
+const appDir = process.env.APP_DIR?.trim() || "/opt/flusso";
+const appHome = process.env.APP_HOME?.trim() || "/home/flusso";
 const expectedFloor = optionalExpectedNumber("A2A_PRICE_FLOOR_USDT");
 const expectedTarget = optionalExpectedNumber("A2A_PRICE_TARGET_USDT");
 const expectedMarkup = process.env.A2A_OPENING_MARKUP_PERCENT?.trim()
@@ -27,6 +30,24 @@ const expectedMarkup = process.env.A2A_OPENING_MARKUP_PERCENT?.trim()
   : 15;
 const endpoint = new URL("/api/internal/a2a/service", baseUrl);
 const quoteEndpoint = new URL("/api/internal/a2a/quote", baseUrl);
+const sourceSkillPath =
+  appDir + "/agent-skills/flusso-content-engineering/SKILL.md";
+const workspaceSkillPath =
+  appHome + "/.openclaw/workspace/skills/flusso-content-engineering/SKILL.md";
+
+const [sourceSkill, workspaceSkill] = await Promise.all([
+  readFile(sourceSkillPath, "utf8"),
+  readFile(workspaceSkillPath, "utf8")
+]);
+if (workspaceSkill !== sourceSkill) {
+  throw new Error(
+    "The OpenClaw workspace skill is stale: " +
+      workspaceSkillPath +
+      " does not match " +
+      sourceSkillPath +
+      "."
+  );
+}
 
 async function requestQuote(clientBudget, round) {
   const quoteResponse = await fetch(quoteEndpoint, {

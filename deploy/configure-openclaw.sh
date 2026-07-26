@@ -6,6 +6,8 @@ APP_USER="${APP_USER:-flusso}"
 APP_HOME="${APP_HOME:-/home/flusso}"
 PLUGIN_ID="flusso-a2a-guard"
 PLUGIN_DIR="$APP_DIR/openclaw-plugins/$PLUGIN_ID"
+SOURCE_SKILL_DIR="$APP_DIR/agent-skills/flusso-content-engineering"
+WORKSPACE_SKILL_DIR="$APP_HOME/.openclaw/workspace/skills/flusso-content-engineering"
 TOOL_IDS_JSON='["flusso_content_engine","flusso_marketplace"]'
 
 if [[ "${EUID}" -ne 0 ]]; then
@@ -21,6 +23,11 @@ fi
 run_openclaw() {
   runuser -u "$APP_USER" -- env HOME="$APP_HOME" openclaw "$@"
 }
+
+install -d -o "$APP_USER" -g "$APP_USER" -m 0750 "$WORKSPACE_SKILL_DIR"
+install -o "$APP_USER" -g "$APP_USER" -m 0644 \
+  "$SOURCE_SKILL_DIR/SKILL.md" \
+  "$WORKSPACE_SKILL_DIR/SKILL.md"
 
 if ! run_openclaw plugins inspect "$PLUGIN_ID" --json >/dev/null 2>&1; then
   run_openclaw plugins install -l "$PLUGIN_DIR"
