@@ -19,6 +19,7 @@ import {
   buildMarketplaceCommand,
   isDirectPeerChatMessage,
   isNonfatalUserNotificationFailure,
+  isSamplingCall,
   marketplaceSessionForContext
 } from "../../lib/openclaw-marketplace-tool.mjs";
 
@@ -410,6 +411,7 @@ export default definePluginEntry({
       }
 
       const floor = optionalPositiveNumber("A2A_PRICE_FLOOR_USDT");
+      const samplingCall = isSamplingCall(prompt, session);
       const pricingInstruction = floor === null
         ? "Pricing is negotiable. No local hard application floor is configured; follow the official marketplace playbook, evaluate the actual workload, and use the user's stated budget and maximum when deciding whether to apply or counter."
         : "Flusso's configured hard application floor is " + floor + " USDT.";
@@ -419,9 +421,11 @@ export default definePluginEntry({
           "Use flusso_marketplace for every marketplace lifecycle command; never use exec or shell for onchainos or okx-a2a.",
           "For a system event, call flusso_marketplace with action next_action and the exact message object as messageJson, then follow only the returned playbook.",
           "For an a2a-agent-chat peer message, reply directly with flusso_marketplace action peer_send; next_action is only for system events.",
-          "Use flusso_content_engine for pricing and fulfillment, but do not generate work before job_accepted.",
-          buildPreAcceptanceCapabilityContext(),
-          pricingInstruction
+          samplingCall
+            ? "This is a platform-marked Sampling Call. Produce the evaluation response directly; do not use the private engine or any marketplace lifecycle write except peer_send."
+            : "Use flusso_content_engine for pricing and fulfillment, but do not generate work before job_accepted.",
+          buildPreAcceptanceCapabilityContext({ sampling: samplingCall }),
+          samplingCall ? "Do not request or discuss payment for this Sampling Call." : pricingInstruction
         ].join("\n")
       };
     }, { priority: 200 });

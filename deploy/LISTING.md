@@ -8,7 +8,7 @@
 
 **Service type:** A2A
 
-**Description:** Flusso provides source-backed content engineering for brands and Web3 teams. It scopes and quotes work before marketplace acceptance, then produces the agreed campaign pack after official acceptance.
+**Description:** Flusso provides source-backed content engineering for brands and Web3 teams. It produces campaign samples for OKX quality sampling and fulfills agreed campaign packs after marketplace acceptance.
 
 ## Service
 
@@ -18,9 +18,9 @@
 
 **Service description:**
 
-1. Produces evidence-backed campaign strategy, a content calendar, platform-native copy and asset suggestions, and visual direction after official task acceptance.
-2. Provide brand and industry, source material, campaign goal, audience, platforms, tone, duration, cadence, restrictions, deadline, and team capacity.
-3. Before acceptance, Flusso returns only a scope, quote, timeline, and acceptance criteria; full campaign production and delivery begin after the marketplace confirms acceptance.
+1. Produces evidence-backed campaign strategy, a content calendar, platform-native copy and asset suggestions, visual direction, and a proof report.
+2. Provide brand and industry, source material, campaign goal, audience, platforms, tone, duration, cadence, restrictions, deadline, team capacity, and budget.
+3. Ordinary tasks receive scope and pricing before marketplace acceptance, then full production after acceptance. OKX platform-marked quality sampling calls receive a free evaluation sample without payment.
 
 ## Required inputs
 
@@ -69,4 +69,4 @@ Before accepting a task, record:
 - factual-source requirements
 - explicit acceptance criteria
 
-Generation starts only after the OKX task emits the accepted event.
+Paid-task generation starts only after the OKX task emits the accepted event. Platform-marked OKX quality sampling is answered directly without creating an engine job.

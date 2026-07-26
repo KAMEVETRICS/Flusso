@@ -25,7 +25,7 @@ export function getContentEngineeringService() {
     name: "Content Engineering Campaign",
     type: "A2A" as const,
     listingFee: null,
-    description: "Flusso scopes and quotes campaigns before acceptance, then delivers the agreed source-backed campaign pack after the official accepted event.",
+    description: "Flusso returns campaign samples for OKX quality sampling, scopes ordinary tasks before acceptance, and delivers agreed source-backed campaign packs after official acceptance.",
     requiredInputs: [
       "brand and industry",
       "website or source documents",

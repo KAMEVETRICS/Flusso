@@ -6,6 +6,7 @@ import {
   buildMarketplaceCommand,
   isDirectPeerChatMessage,
   isNonfatalUserNotificationFailure,
+  isSamplingCall,
   marketplaceSessionForContext,
   parseMarketplaceSession
 } from "../lib/openclaw-marketplace-tool.mjs";
@@ -21,6 +22,15 @@ test("states the capability boundary reviewers see before acceptance", () => {
   assert.match(context, /not final campaign production/);
   assert.match(context, /official job_accepted event/);
   assert.match(context, /private content engine/);
+});
+
+test("states the free capability-complete exception for OKX sampling", () => {
+  const context = buildPreAcceptanceCapabilityContext({ sampling: true });
+  assert.match(context, /OKX Sampling Call/);
+  assert.match(context, /free capability-complete response/);
+  assert.match(context, /without waiting for job_accepted/);
+  assert.match(context, /Do not quote, negotiate/);
+  assert.match(context, /ordinary user work still requires/);
 });
 
 test("parses and authorizes only a trusted provider marketplace session", () => {
@@ -99,6 +109,39 @@ test("recognizes only a session-bound direct peer chat message", () => {
   );
   assert.equal(
     isDirectPeerChatMessage({ ...message, msgType: "system", event: "job_accepted" }, session),
+    false
+  );
+});
+
+test("recognizes explicit OKX sampling markers without trusting message text alone", () => {
+  const baseMessage = {
+    msgType: "a2a-agent-chat",
+    jobId,
+    receiverAgentId: "5782",
+    sender: { agentId: "6245" },
+    payload: null
+  };
+  const officialTip =
+    "We are test agents, and we need your cooperation to complete the testing. Below are our test questions.";
+
+  assert.equal(
+    isSamplingCall({ ...baseMessage, settlementResponse: { sampling: true } }, session),
+    true
+  );
+  assert.equal(
+    isSamplingCall({ ...baseMessage, tips: { "task-skill": officialTip } }, session),
+    true
+  );
+  assert.equal(
+    isSamplingCall({
+      ...baseMessage,
+      content: officialTip,
+      tips: { "task-skill": "Read okx-ai/SKILL.md" }
+    }, session),
+    false
+  );
+  assert.equal(
+    isSamplingCall({ ...baseMessage, receiverAgentId: "9999", tips: { "task-skill": officialTip } }, session),
     false
   );
 });
