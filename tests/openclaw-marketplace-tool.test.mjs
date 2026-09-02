@@ -4,11 +4,14 @@ import {
   allowedMarketplaceActions,
   buildPreAcceptanceCapabilityContext,
   buildMarketplaceCommand,
+  extractSamplingBrief,
   isDirectPeerChatMessage,
   isNonfatalUserNotificationFailure,
   isSamplingCall,
   marketplaceSessionForContext,
-  parseMarketplaceSession
+  parseMarketplaceSession,
+  samplingPeerSendProblem,
+  SAMPLING_DELIVERABLE_SECTIONS
 } from "../lib/openclaw-marketplace-tool.mjs";
 
 const jobId = "0x" + "ab".repeat(32);
@@ -27,10 +30,15 @@ test("states the capability boundary reviewers see before acceptance", () => {
 test("states the free capability-complete exception for OKX sampling", () => {
   const context = buildPreAcceptanceCapabilityContext({ sampling: true });
   assert.match(context, /OKX Sampling Call/);
-  assert.match(context, /free capability-complete response/);
+  assert.match(context, /free capability-complete campaign sample/);
   assert.match(context, /without waiting for job_accepted/);
-  assert.match(context, /Do not quote, negotiate/);
+  assert.match(context, /quote, negotiate/);
   assert.match(context, /ordinary user work still requires/);
+  for (const section of SAMPLING_DELIVERABLE_SECTIONS) {
+    assert.match(context, new RegExp(section));
+  }
+  assert.match(context, /peer_send/);
+  assert.match(context, /full publishable posts/);
 });
 
 test("parses and authorizes only a trusted provider marketplace session", () => {
@@ -113,7 +121,7 @@ test("recognizes only a session-bound direct peer chat message", () => {
   );
 });
 
-test("recognizes explicit OKX sampling markers without trusting message text alone", () => {
+test("recognizes OKX sampling markers in tips, flags, content, or listing-test preamble", () => {
   const baseMessage = {
     msgType: "a2a-agent-chat",
     jobId,
@@ -123,6 +131,8 @@ test("recognizes explicit OKX sampling markers without trusting message text alo
   };
   const officialTip =
     "We are test agents, and we need your cooperation to complete the testing. Below are our test questions.";
+  const listingPreamble =
+    "A task has been created for your service through okx.ai task market. Job Title: \"Web3 NFT Launch Strategy Plan\". Please provide a campaign strategy, content calendar, visual briefs, platform-native posts, and a proof report.";
 
   assert.equal(
     isSamplingCall({ ...baseMessage, settlementResponse: { sampling: true } }, session),
@@ -138,12 +148,77 @@ test("recognizes explicit OKX sampling markers without trusting message text alo
       content: officialTip,
       tips: { "task-skill": "Read okx-ai/SKILL.md" }
     }, session),
-    false
+    true
   );
+  assert.equal(
+    isSamplingCall({
+      ...baseMessage,
+      content: listingPreamble,
+      tips: { "task-skill": "Read okx-ai/SKILL.md" }
+    }, session),
+    true
+  );
+  assert.equal(isSamplingCall(listingPreamble, session), true);
+  assert.equal(isSamplingCall(officialTip, session), true);
   assert.equal(
     isSamplingCall({ ...baseMessage, receiverAgentId: "9999", tips: { "task-skill": officialTip } }, session),
     false
   );
+  assert.equal(
+    isSamplingCall({
+      ...baseMessage,
+      content: "Please quote a 4-week campaign and wait for acceptance.",
+      tips: { "task-skill": "Read okx-ai/SKILL.md" }
+    }, session),
+    false
+  );
+});
+
+test("extracts the listing-test brief and rejects incomplete sampling replies", () => {
+  const labeled = [
+    "Brand: CryptoEdge",
+    "Industry: Web3/Cryptocurrency",
+    "Campaign goal: Drive awareness and sign-ups",
+    "Audience: Crypto enthusiasts",
+    "Platforms: Twitter, Discord, LinkedIn",
+    "Tone: Informative yet approachable",
+    "Duration: 4 weeks",
+    "Cadence: Daily posts on Twitter and Discord",
+    "Restrictions: Avoid technical jargon"
+  ].join("\n");
+  const brief = extractSamplingBrief(labeled);
+  assert.equal(brief.brand, "CryptoEdge");
+  assert.equal(brief.platforms, "Twitter, Discord, LinkedIn");
+  assert.match(
+    buildPreAcceptanceCapabilityContext({ sampling: true, prompt: labeled }),
+    /Brand: CryptoEdge/
+  );
+
+  const narrative = "A task has been created for your service through okx.ai task market. Our brand is 'CryptoArtX', operating in the digital art NFT sector.";
+  assert.equal(extractSamplingBrief(narrative).brand, "CryptoArtX");
+
+  assert.match(
+    samplingPeerSendProblem("Thanks — scope is clear. Proposed deliverables: a strategy and calendar. Please share the budget."),
+    /not a scope confirmation/
+  );
+  assert.match(
+    samplingPeerSendProblem("## Campaign strategy\nPositioning for CryptoEdge.\n## Content calendar\nDay 1 X post."),
+    /must include/
+  );
+
+  const complete = [
+    "## Campaign strategy",
+    "Position CryptoEdge as the clear onboarding path.",
+    "## Content calendar",
+    "Day 1 X, Day 1 Discord, Day 2 LinkedIn.",
+    "## Platform-native posts",
+    "X: CryptoEdge is the shortest path from curiosity to a first safe action.",
+    "## Visual briefs",
+    "1:1 explainer card, key message: start smaller.",
+    "## Proof report",
+    "Claim: onboarding can be beginner-safe. Source: not supplied. Needs verification."
+  ].join("\n");
+  assert.equal(samplingPeerSendProblem(complete), null);
 });
 
 test("keeps pricing negotiable by default and enforces an optional configured floor", () => {

@@ -25,7 +25,7 @@ export function getContentEngineeringService() {
     name: "Content Engineering Campaign",
     type: "A2A" as const,
     listingFee: null,
-    description: "Flusso returns campaign samples for OKX quality sampling, scopes ordinary tasks before acceptance, and delivers agreed source-backed campaign packs after official acceptance.",
+    description: "Creates a source-backed campaign strategy, content calendar, platform-native posts, visual briefs, and a proof report for brands and Web3 teams.\nProvide brand, industry, sources, goal, audience, platforms, tone, duration, cadence, restrictions, deadline, and team capacity.",
     requiredInputs: [
       "brand and industry",
       "website or source documents",
@@ -37,10 +37,9 @@ export function getContentEngineeringService() {
     deliverables: [
       "campaign strategy",
       "content calendar",
-      "platform-native copy and asset suggestions",
+      "platform-native posts",
       "visual briefs",
-      "proof report",
-      "strategy, calendar, and content-pack exports"
+      "proof report"
     ],
     negotiation: {
       configured: floor !== null || target !== null,

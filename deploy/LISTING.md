@@ -8,7 +8,7 @@
 
 **Service type:** A2A
 
-**Description:** Flusso provides source-backed content engineering for brands and Web3 teams. It produces campaign samples for OKX quality sampling and fulfills agreed campaign packs after marketplace acceptance.
+**Description:** Flusso provides source-backed content engineering for brands and Web3 teams.
 
 ## Service
 
@@ -18,8 +18,8 @@
 
 **Service description:**
 
-1. Creates source-backed campaign strategy, calendars, platform-native copy and asset suggestions, visual direction, and proof reports. OKX-marked sampling calls receive a free capability sample; paid tasks are fulfilled after acceptance.
-2. Provide brand, industry, sources, goal, audience, platforms, tone, duration, cadence, restrictions, deadline, team capacity, and budget.
+1. Creates a source-backed campaign strategy, content calendar, platform-native posts, visual briefs, and a proof report for brands and Web3 teams.
+2. Provide brand, industry, sources, goal, audience, platforms, tone, duration, cadence, restrictions, deadline, and team capacity.
 
 ## Required inputs
 
@@ -35,14 +35,10 @@
 ## Deliverables
 
 - campaign strategy
-- audience and content territories
 - content calendar
-- publish-ready platform-native assets
+- platform-native posts
 - visual briefs
 - proof report with claim support
-- strategy document export
-- calendar CSV
-- content-pack JSON
 - one revision unless negotiated otherwise
 
 ## Negotiation policy

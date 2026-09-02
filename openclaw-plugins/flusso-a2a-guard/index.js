@@ -10,17 +10,22 @@ import {
   findSubfloorOffer,
   floorFallback,
   isFlussoA2ATurn,
-  parseNegotiationRound
+  parseNegotiationRound,
+  samplingToolBlock
 } from "../../lib/openclaw-a2a-guard.mjs";
 import { buildEngineRequest } from "../../lib/openclaw-engine-tool.mjs";
 import {
   allowedMarketplaceActions,
   buildPreAcceptanceCapabilityContext,
   buildMarketplaceCommand,
+  buildSamplingDeliveryInstructions,
+  extractSamplingBrief,
   isDirectPeerChatMessage,
   isNonfatalUserNotificationFailure,
   isSamplingCall,
-  marketplaceSessionForContext
+  marketplaceSessionForContext,
+  samplingPeerSendProblem,
+  samplingPromptText
 } from "../../lib/openclaw-marketplace-tool.mjs";
 
 const pluginId = "flusso-a2a-guard";
@@ -149,6 +154,10 @@ function findRun(event, context) {
   if (runId && runs.has(runId)) return runs.get(runId);
   const latestRun = context.sessionKey ? latestRunBySession.get(context.sessionKey) : null;
   return latestRun ? runs.get(latestRun) : null;
+}
+
+function toolParams(event) {
+  return event.params ?? event.args ?? event.input ?? event.toolParams ?? {};
 }
 
 async function persistEvent(api, state, event, error = null) {
@@ -319,6 +328,10 @@ export default definePluginEntry({
 
           const latestRunId = latestRunBySession.get(sessionKey);
           const currentRun = latestRunId ? runs.get(latestRunId) : null;
+          if (currentRun?.samplingCall && command.action === "peer_send") {
+            const problem = samplingPeerSendProblem(params.content);
+            if (problem) throw new Error(problem);
+          }
           const isDirectPeerReply = command.action === "peer_send"
             && isDirectPeerChatMessage(currentRun?.prompt, session);
           const playbook = marketplacePlaybooks.get(key);
@@ -405,6 +418,7 @@ export default definePluginEntry({
           agentId: context.agentId ?? "unknown",
           prompt,
           marketplaceSession: session,
+          samplingCall: isSamplingCall(prompt, session),
           round: parseNegotiationRound(prompt),
           messageKey: createHash("sha256").update(`${sessionKey}\n${prompt}`).digest("hex")
         });
@@ -412,6 +426,8 @@ export default definePluginEntry({
 
       const floor = optionalPositiveNumber("A2A_PRICE_FLOOR_USDT");
       const samplingCall = isSamplingCall(prompt, session);
+      const currentRun = runId ? runs.get(runId) : null;
+      if (currentRun) currentRun.samplingCall = samplingCall;
       const pricingInstruction = floor === null
         ? "Pricing is negotiable. No local hard application floor is configured; follow the official marketplace playbook, evaluate the actual workload, and use the user's stated budget and maximum when deciding whether to apply or counter."
         : "Flusso's configured hard application floor is " + floor + " USDT.";
@@ -422,9 +438,9 @@ export default definePluginEntry({
           "For a system event, call flusso_marketplace with action next_action and the exact message object as messageJson, then follow only the returned playbook.",
           "For an a2a-agent-chat peer message, reply directly with flusso_marketplace action peer_send; next_action is only for system events.",
           samplingCall
-            ? "This is a platform-marked Sampling Call. Produce the evaluation response directly; do not use the private engine or any marketplace lifecycle write except peer_send."
+            ? "This is a platform-marked Sampling Call or listing-quality evaluation. peer_send one complete campaign sample with strategy, calendar, platform-native posts, visual briefs, and a proof report; do not use the private engine or any marketplace lifecycle write except peer_send."
             : "Use flusso_content_engine for pricing and fulfillment, but do not generate work before job_accepted.",
-          buildPreAcceptanceCapabilityContext({ sampling: samplingCall }),
+          buildPreAcceptanceCapabilityContext({ sampling: samplingCall, prompt }),
           samplingCall ? "Do not request or discuss payment for this Sampling Call." : pricingInstruction
         ].join("\n")
       };
@@ -437,12 +453,14 @@ export default definePluginEntry({
       if (!runId || !sessionKey || !isFlussoA2ATurn({ agentId, sessionKey, prompt: event.prompt })) return;
 
       const prompt = String(event.prompt ?? "");
+      const marketplace = marketplaceSession(context);
       const state = {
         runId,
         sessionKey,
         agentId,
         prompt,
-        marketplaceSession: marketplaceSession(context),
+        marketplaceSession: marketplace,
+        samplingCall: isSamplingCall(prompt, marketplace),
         round: parseNegotiationRound(prompt),
         messageKey: createHash("sha256").update(`${sessionKey}\n${prompt}`).digest("hex")
       };
@@ -475,6 +493,13 @@ export default definePluginEntry({
       }
 
       const state = findRun(event, context);
+      const sampling = Boolean(state?.samplingCall)
+        || isSamplingCall(state?.prompt ?? event.prompt, marketplaceSession(context));
+      const blocked = samplingToolBlock(event.toolName, toolParams(event), sampling);
+      if (blocked) {
+        return { block: true, blockReason: blocked };
+      }
+
       if (state) await persistEvent(api, state, "tool_started");
     }, { priority: 100 });
 
@@ -482,6 +507,22 @@ export default definePluginEntry({
       const state = findRun(event, context);
       if (!state) return;
       state.finalText = assistantText(event.lastAssistantMessage).trim();
+      if (state.samplingCall && !state.peerSent) {
+        const problem = samplingPeerSendProblem(state.finalText);
+        if (problem) {
+          return {
+            action: "revise",
+            reason: problem,
+            retry: {
+              instruction: buildSamplingDeliveryInstructions(
+                extractSamplingBrief(samplingPromptText(state.prompt))
+              ),
+              idempotencyKey: `flusso-sampling:${state.messageKey}`,
+              maxAttempts: 1
+            }
+          };
+        }
+      }
       const floor = optionalPositiveNumber("A2A_PRICE_FLOOR_USDT");
       const violation = findSubfloorOffer(assistantText(event.lastAssistantMessage), floor);
       if (!violation) return;

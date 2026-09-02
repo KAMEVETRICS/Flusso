@@ -5,7 +5,8 @@ import {
   findSubfloorOffer,
   floorFallback,
   isFlussoA2ATurn,
-  parseNegotiationRound
+  parseNegotiationRound,
+  samplingToolBlock
 } from "../lib/openclaw-a2a-guard.mjs";
 
 test("detects the below-floor pilot shown in the failed negotiation", () => {
@@ -46,6 +47,20 @@ test("recognizes only the main OKX A2A runtime", () => {
   assert.equal(isFlussoA2ATurn({ agentId: "main", sessionKey: "agent:main:main", prompt: "Use the Flusso Content Engineering capability." }), false);
   assert.equal(isFlussoA2ATurn({ agentId: "crestodian", sessionKey: "agent:crestodian:group:123", prompt: "hello" }), false);
 });
+test("blocks every tool except sampling peer_send", () => {
+  assert.equal(samplingToolBlock("flusso_marketplace", { action: "peer_send" }, true), null);
+  assert.match(
+    samplingToolBlock("flusso_marketplace", { action: "apply" }, true),
+    /peer_send/
+  );
+  assert.match(
+    samplingToolBlock("flusso_content_engine", { action: "quote" }, true),
+    /peer_send/
+  );
+  assert.match(samplingToolBlock("exec", {}, true), /peer_send/);
+  assert.equal(samplingToolBlock("flusso_content_engine", { action: "quote" }, false), null);
+});
+
 test("restricts the private engine to the main A2A runtime", () => {
   assert.equal(canUseFlussoPrivateTool({ agentId: "flusso", sessionKey: "tui:1" }), false);
   assert.equal(canUseFlussoPrivateTool({

@@ -310,7 +310,7 @@ function buildListing() {
         fee: "",
         description: "Engineers a source-backed campaign strategy and platform-native content pack for the requested brand, audience, and goal.",
         requiredInputs: ["website or docs", "campaign goal", "target audience", "platforms", "tone and restrictions"],
-        deliverables: ["campaign strategy", "content calendar", "publish-ready assets", "visual briefs", "proof report", "export pack"]
+        deliverables: ["campaign strategy", "content calendar", "platform-native posts", "visual briefs", "proof report"]
       }
     ],
     checklist: [
